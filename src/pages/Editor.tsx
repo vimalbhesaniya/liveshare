@@ -8,6 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import CodeEditor from '@uiw/react-textarea-code-editor';
 
+type UserSelection = {
+  userId: string;
+  start: number;
+  end: number;
+  color: string;
+};
+
 const Editor = () => {
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
@@ -15,9 +22,12 @@ const Editor = () => {
   const [language, setLanguage] = useState("javascript");
   const [snippetId, setSnippetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userSelections, setUserSelections] = useState<UserSelection[]>([]);
+  const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const isRemoteUpdateRef = useRef(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
   // Generate random unique code
   const generateUniqueCode = () => {
@@ -90,7 +100,7 @@ const Editor = () => {
     loadOrCreateSnippet();
   }, [urlCode, navigate, toast]);
 
-  // Set up realtime subscription
+  // Set up realtime subscription and presence
   useEffect(() => {
     if (!urlCode) return;
 
@@ -111,12 +121,34 @@ const Editor = () => {
           setLanguage(payload.new.language || "javascript");
         }
       )
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const selections: UserSelection[] = [];
+        
+        Object.keys(state).forEach((key) => {
+          const presences = state[key] as any[];
+          presences.forEach((presence) => {
+            if (presence.userId !== myUserId && presence.selection) {
+              selections.push(presence.selection);
+            }
+          });
+        });
+        
+        setUserSelections(selections);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            userId: myUserId,
+            selection: null,
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [urlCode]);
+  }, [urlCode, myUserId]);
 
   // Update database when code changes (with debouncing)
   const updateDatabase = async (newCode: string, newLanguage: string) => {
@@ -157,6 +189,26 @@ const Editor = () => {
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
     updateDatabase(code, newLanguage);
+  };
+
+  const handleSelection = async () => {
+    if (!editorRef.current || !urlCode) return;
+    
+    const start = editorRef.current.selectionStart;
+    const end = editorRef.current.selectionEnd;
+    
+    if (start !== end) {
+      const channel = supabase.channel(`code-snippet-${urlCode}`);
+      await channel.track({
+        userId: myUserId,
+        selection: {
+          userId: myUserId,
+          start,
+          end,
+          color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+        },
+      });
+    }
   };
 
   const handleShare = () => {
@@ -207,7 +259,7 @@ const Editor = () => {
             <h1 className="text-2xl font-bold">Code Editor</h1>
             <Select value={language} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue />
+                <SelectValue placeholder="Select Language" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="javascript">JavaScript</SelectItem>
@@ -237,12 +289,14 @@ const Editor = () => {
           </div>
         </div>
         
-        <div className="rounded-lg border border-border overflow-hidden shadow-2xl">
+        <div className="rounded-lg border border-border overflow-hidden shadow-2xl relative">
           <CodeEditor
             value={code}
             language={language}
             placeholder="Start typing your code..."
             onChange={(evn) => handleCodeChange(evn.target.value)}
+            onSelect={handleSelection}
+            ref={editorRef as any}
             padding={20}
             style={{
               fontSize: 14,
@@ -251,6 +305,28 @@ const Editor = () => {
               minHeight: '70vh',
             }}
           />
+          {userSelections.map((selection, idx) => {
+            const beforeText = code.substring(0, selection.start);
+            const lines = beforeText.split('\n');
+            const line = lines.length;
+            const col = lines[lines.length - 1].length;
+            
+            return (
+              <div
+                key={idx}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${20 + col * 8.4}px`,
+                  top: `${20 + (line - 1) * 21}px`,
+                  width: `${(selection.end - selection.start) * 8.4}px`,
+                  height: '21px',
+                  backgroundColor: selection.color,
+                  opacity: 0.3,
+                  borderRadius: '2px',
+                }}
+              />
+            );
+          })}
         </div>
         
         <div className="mt-6 text-center text-sm text-muted-foreground">
