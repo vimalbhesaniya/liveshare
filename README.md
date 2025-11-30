@@ -1,73 +1,70 @@
-# Welcome to your Lovable project
+# LiveShare - Real-time Code Sharing Platform
 
-## Project info
+Share code instantly with developers worldwide. Perfect for interviews, collaboration, debugging & learning together.
 
-**URL**: https://lovable.dev/projects/8ce8a7f7-8811-46a7-b2cc-741dc8451065
+## ✨ Features
 
-## How can I edit this code?
+- **Instant Code Sharing** - No sign-up required. Create a session and share in seconds
+- **Custom URLs** - Choose your own unique URL like `liveshare.in/your-code`
+- **Password Protection** - Secure your code with optional password protection
+- **Syntax Highlighting** - Beautiful highlighting for 50+ programming languages
+- **Dark/Light Theme** - Toggle between themes for comfortable viewing
+- **Real-time Collaboration** - Share your unique link with anyone to collaborate
 
-There are several ways of editing your application.
+## 🚀 How It Works
 
-**Use Lovable**
+1. **Open Editor** - Click "New Session" to open the code editor
+2. **Set Your URL** - Choose a unique code for your shareable link
+3. **Paste Code** - Write or paste your code with syntax highlighting
+4. **Share** - Share your unique link with anyone
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8ce8a7f7-8811-46a7-b2cc-741dc8451065) and start prompting.
+## 🛠️ Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (Database & Auth)
+- **Icons**: Lucide React
 
-**Use your preferred IDE**
+## 📦 Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Clone the repository
+git clone https://github.com/your-username/liveshare.git
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Navigate to project directory
+cd liveshare
 
-Follow these steps:
+# Install dependencies
+npm install
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🔧 Scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-**Use GitHub Codespaces**
+## 🌐 Environment Variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Create a `.env` file in the root directory:
 
-## What technologies are used for this project?
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-This project is built with:
+## 📝 License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+MIT License - feel free to use this project for personal or commercial purposes.
 
-## How can I deploy this project?
+## 🤝 Contributing
 
-Simply open [Lovable](https://lovable.dev/projects/8ce8a7f7-8811-46a7-b2cc-741dc8451065) and click on Share -> Publish.
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Made with ❤️ for developers
