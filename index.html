@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" itemscope itemtype="https://schema.org/WebApplication">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -161,6 +161,25 @@
     <!-- Preload Critical Resources -->
     <link rel="preload" href="/src/main.tsx" as="script" />
     <link rel="modulepreload" href="/src/main.tsx" />
+    
+    <!-- Additional Performance Hints -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <!-- Search Intent Meta Tags -->
+    <meta name="application-name" content="LiveShare" />
+    <meta name="msapplication-tooltip" content="Free Online Code Editor" />
+    <meta name="msapplication-starturl" content="/" />
+    <meta name="msapplication-navbutton-color" content="#ffffff" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="google-site-verification" content="" />
+    <meta name="msvalidate.01" content="" />
+    <meta name="yandex-verification" content="" />
+    <meta name="p:domain_verify" content="" />
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -317,7 +336,7 @@
             "name": "Is LiveShare free to use?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, LiveShare is completely free to use. No sign-up required, no credit card needed. Share code instantly with anyone."
+              "text": "Yes, LiveShare is completely free to use. No sign-up required, no credit card needed. Share code instantly with anyone. All features including syntax highlighting, password protection, and real-time collaboration are available at no cost."
             }
           },
           {
@@ -325,7 +344,7 @@
             "name": "How do I share code with LiveShare?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Simply open the editor, choose a unique URL, paste your code, and share the link. It takes less than a minute to get started."
+              "text": "Simply open the editor, choose a unique URL like liveshare.dev/your-code, paste your code, and share the link. It takes less than a minute to get started. No installation or account creation required."
             }
           },
           {
@@ -333,7 +352,7 @@
             "name": "What programming languages are supported?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "LiveShare supports syntax highlighting for 50+ programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, and many more."
+              "text": "LiveShare supports syntax highlighting for 50+ programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, PHP, Ruby, Swift, Kotlin, and many more. The code editor automatically detects and highlights code based on the selected language."
             }
           },
           {
@@ -341,7 +360,7 @@
             "name": "Can I password protect my code?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, LiveShare offers optional password protection to secure your code snippets. You can set a password when creating a new session."
+              "text": "Yes, LiveShare offers optional password protection to secure your code snippets. You can set a password when creating a new session. This feature is especially useful for coding interviews and sensitive code sharing."
             }
           },
           {
@@ -349,7 +368,7 @@
             "name": "Is LiveShare good for coding interviews?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Absolutely! LiveShare is perfect for coding interviews, pair programming, debugging sessions, and teaching. Share code instantly without any setup."
+              "text": "Absolutely! LiveShare is perfect for coding interviews, pair programming, debugging sessions, and teaching. Share code instantly without any setup. Many companies use LiveShare for technical interviews because of its real-time collaboration features and ease of use."
             }
           },
           {
@@ -357,8 +376,98 @@
             "name": "Does LiveShare support real-time collaboration?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, LiveShare supports real-time collaboration. Share your unique link and collaborate with others instantly. Multiple users can view and edit code simultaneously."
+              "text": "Yes, LiveShare supports real-time collaboration. Share your unique link and collaborate with others instantly. Multiple users can view and edit code simultaneously, making it perfect for pair programming and code reviews."
             }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account to use LiveShare?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No, LiveShare requires no sign-up or account creation. You can start sharing code immediately by opening the editor and creating a new session. This makes it the fastest way to share code online."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use LiveShare on mobile devices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, LiveShare is mobile-friendly and works on all devices including smartphones and tablets. You can access and share code from anywhere, making it convenient for remote collaboration and on-the-go code sharing."
+            }
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "The Best Free Online Code Editor for Sharing Code Instantly",
+        "description": "Learn how to use LiveShare, a free online code editor and code sharing platform perfect for coding interviews, pair programming, debugging, and teaching.",
+        "author": {
+          "@type": "Organization",
+          "name": "LiveShare"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "LiveShare",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://liveshare.dev/android-icon-192x192.png"
+          }
+        },
+        "datePublished": "2024-01-01",
+        "dateModified": "2024-12-20",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://liveshare.dev/"
+        },
+        "articleSection": "Developer Tools",
+        "keywords": "online code editor, code sharing, code collaboration, coding interviews, pair programming, code debugging, programming tools"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "LiveShare Features",
+        "description": "Key features of LiveShare free online code editor",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Instant Code Sharing",
+            "description": "Create and share code in seconds with custom URLs"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "No Sign-Up Required",
+            "description": "Start sharing code immediately without creating an account"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Syntax Highlighting",
+            "description": "Beautiful code highlighting for 50+ programming languages"
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "name": "Password Protection",
+            "description": "Secure your code snippets with optional password protection"
+          },
+          {
+            "@type": "ListItem",
+            "position": 5,
+            "name": "Real-Time Collaboration",
+            "description": "Multiple users can view and edit code simultaneously"
+          },
+          {
+            "@type": "ListItem",
+            "position": 6,
+            "name": "Dark and Light Themes",
+            "description": "Choose your preferred theme for comfortable coding"
           }
         ]
       }

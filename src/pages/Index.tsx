@@ -321,13 +321,97 @@ const Index = () => {
         </div>
       </section>
 
+      {/* SEO Content Section - Rich Text for Search Engines */}
+      <section className="py-24 container mx-auto px-6 max-w-4xl">
+        <article className="prose prose-lg dark:prose-invert max-w-none">
+          <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-6">
+            The Best Free Online Code Editor for Sharing Code Instantly
+          </h2>
+          <div className="scroll-animate delay-1 space-y-6 text-muted-foreground">
+            <p className="text-base md:text-lg leading-relaxed">
+              <strong>LiveShare</strong> is a free online code editor and code sharing platform designed for developers, programmers, and software engineers who need to share code snippets quickly and efficiently. Whether you're conducting coding interviews, debugging with your team, teaching programming concepts, or collaborating on projects, LiveShare makes it easy to share code instantly without any sign-up or installation required.
+            </p>
+            
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Why Use an Online Code Editor for Code Sharing?
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              Traditional code sharing methods like email attachments, GitHub gists, or messaging apps can be cumbersome and slow. With LiveShare's online code editor, you can create a shareable link in seconds. Our web-based code editor supports syntax highlighting for over 50 programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, PHP, Ruby, and many more. This makes it perfect for code reviews, pair programming sessions, technical interviews, and educational purposes.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Perfect for Coding Interviews and Technical Assessments
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              LiveShare is widely used by hiring managers and technical recruiters for conducting coding interviews. The real-time collaboration features allow interviewers to watch candidates code in real-time, making it easier to assess problem-solving skills and coding abilities. The password protection feature ensures that only authorized participants can access the code session, maintaining the integrity of technical assessments.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Ideal for Pair Programming and Team Collaboration
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              Software development teams use LiveShare for pair programming, code reviews, and debugging sessions. The instant code sharing capability eliminates the need for screen sharing or complex setup procedures. Simply create a session, share the link, and start collaborating. The syntax highlighting and code formatting features make it easy to read and understand code, even when working with unfamiliar codebases.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Educational Tool for Teaching and Learning Programming
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              Teachers and students love LiveShare for its simplicity and effectiveness in educational settings. Programming instructors can share code examples instantly during lectures, while students can share their code for feedback and help. The no-sign-up requirement means students can start using the tool immediately without creating accounts or dealing with authentication issues.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Key Features of Our Free Code Sharing Platform
+            </h3>
+            <ul className="list-disc list-inside space-y-3 text-base md:text-lg leading-relaxed">
+              <li><strong>Instant Code Sharing:</strong> Create and share code in seconds with custom URLs like liveshare.dev/your-code</li>
+              <li><strong>No Sign-Up Required:</strong> Start sharing code immediately without creating an account</li>
+              <li><strong>Syntax Highlighting:</strong> Beautiful code highlighting for 50+ programming languages</li>
+              <li><strong>Password Protection:</strong> Secure your code snippets with optional password protection</li>
+              <li><strong>Real-Time Collaboration:</strong> Multiple users can view and edit code simultaneously</li>
+              <li><strong>Dark and Light Themes:</strong> Choose your preferred theme for comfortable coding</li>
+              <li><strong>Free Forever:</strong> All features are completely free with no hidden costs</li>
+              <li><strong>Mobile Friendly:</strong> Access and share code from any device, anywhere</li>
+            </ul>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              How to Share Code Online with LiveShare
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              Sharing code with LiveShare is incredibly simple. First, click "New Session" to open our online code editor. Next, choose a unique URL for your code snippet (for example, liveshare.dev/my-algorithm). Then, paste or write your code in the editor. The syntax highlighting will automatically format your code based on the programming language you select. Finally, share the unique link with anyone you want to collaborate with. They can access your code instantly without any setup or installation.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Use Cases: When to Use LiveShare Code Editor
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              LiveShare is perfect for various scenarios including technical interviews, remote pair programming, code debugging sessions, programming tutorials, code reviews, sharing code snippets on forums or social media, teaching programming concepts, collaborative problem-solving, and quick code demonstrations. It's the fastest way to share code online without the complexity of version control systems or code hosting platforms.
+            </p>
+          </div>
+        </article>
+      </section>
+
       {/* Footer */}
       <footer className="scroll-animate border-t border-border py-12">
         <div className="container mx-auto px-6">
-          <div className="text-center text-muted-foreground">
+          <div className="text-center text-muted-foreground space-y-4">
             <p className="text-sm">
               Used by software engineers at companies and universities we
               respect and admire.
+            </p>
+            <nav className="flex flex-wrap justify-center gap-6 text-sm">
+              <Link to="/" className="hover:text-foreground transition-colors">
+                Home
+              </Link>
+              <Link to="/editor" className="hover:text-foreground transition-colors">
+                Code Editor
+              </Link>
+              <a href="https://liveshare.dev" className="hover:text-foreground transition-colors">
+                LiveShare.dev
+              </a>
+            </nav>
+            <p className="text-xs mt-4">
+              © 2024 LiveShare - Free Online Code Editor and Code Sharing Platform
             </p>
           </div>
         </div>
