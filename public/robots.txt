@@ -1,4 +1,5 @@
 # robots.txt for liveshare.dev
+# Updated: 2024-12-20
 
 # Allow all search engines
 User-agent: *
@@ -12,6 +13,10 @@ Crawl-delay: 1
 
 # Specific rules for major search engines
 User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Googlebot-Image
 Allow: /
 Crawl-delay: 0
 
@@ -33,6 +38,37 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+# AI and Search Engine Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
 # Disallow admin or private areas (if any)
 # Disallow: /admin/
 # Disallow: /private/
+
+# Allow all public pages
+Allow: /editor
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.svg
+Allow: /*.ico

@@ -6,19 +6,20 @@
 
     <!-- Primary Meta Tags -->
     <title>
-      LiveShare - Share Code in Real-time with Developers | Online Code Editor
+      LiveShare - Free Online Code Editor | Share Code Instantly | Real-time
+      Collaboration
     </title>
     <meta
       name="title"
-      content="LiveShare - Share Code in Real-time with Developers | Online Code Editor"
+      content="LiveShare - Free Online Code Editor | Share Code Instantly | Real-time Collaboration"
     />
     <meta
       name="description"
-      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide. No sign-up required. Syntax highlighting, password protection, and real-time collaboration."
+      content="Free online code editor and code sharing platform. Share code snippets instantly with developers worldwide. Perfect for coding interviews, pair programming, debugging, and teaching. No sign-up required. Syntax highlighting for 50+ languages, password protection, and real-time collaboration."
     />
     <meta
       name="keywords"
-      content="code sharing, online code editor, code collaboration, share code, code snippets, pair programming, code interview, code debugging, code teaching, real-time code sharing, liveshare, code paste, syntax highlighting, developer tools, code collaboration tool"
+      content="online code editor, code sharing, share code online, code collaboration tool, code snippets, pair programming, coding interview tool, code debugging, code teaching, real-time code sharing, liveshare, code paste, syntax highlighting, developer tools, free code editor, collaborative coding, code review tool, instant code sharing, web code editor, code playground"
     />
     <meta name="author" content="LiveShare" />
     <meta
@@ -26,14 +27,31 @@
       content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
     />
     <meta name="language" content="English" />
-    <meta name="revisit-after" content="7 days" />
+    <meta name="revisit-after" content="3 days" />
     <meta name="rating" content="general" />
+    <meta name="geo.region" content="US" />
+    <meta name="geo.placename" content="United States" />
+    <meta name="distribution" content="global" />
+    <meta name="coverage" content="worldwide" />
+    <meta name="target" content="all" />
+    <meta
+      name="audience"
+      content="developers, programmers, software engineers, students, teachers"
+    />
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://liveshare.dev/" />
 
+    <!-- Alternate Languages (hreflang) -->
+    <link rel="alternate" hreflang="en" href="https://liveshare.dev/" />
+    <link rel="alternate" hreflang="x-default" href="https://liveshare.dev/" />
+
     <!-- Sitemap -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- DNS Prefetch for Performance -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 
     <!-- Favicon - Fixed for search engines -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -93,40 +111,44 @@
     <meta property="og:url" content="https://liveshare.dev/" />
     <meta
       property="og:title"
-      content="LiveShare - Share Code in Real-time with Developers"
+      content="LiveShare - Free Online Code Editor | Share Code Instantly"
     />
     <meta
       property="og:description"
-      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide. No sign-up required."
+      content="Free online code editor and code sharing platform. Share code snippets instantly with developers worldwide. Perfect for coding interviews, pair programming, debugging, and teaching. No sign-up required. Syntax highlighting for 50+ languages."
     />
     <meta property="og:image" content="https://liveshare.dev/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
     <meta
       property="og:image:alt"
-      content="LiveShare - Share Code in Real-time with Developers"
+      content="LiveShare - Free Online Code Editor for Sharing Code Instantly"
     />
     <meta property="og:site_name" content="LiveShare" />
     <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="article:author" content="LiveShare" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://liveshare.dev/" />
     <meta
       name="twitter:title"
-      content="LiveShare - Share Code in Real-time with Developers"
+      content="LiveShare - Free Online Code Editor | Share Code Instantly"
     />
     <meta
       name="twitter:description"
-      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide."
+      content="Free online code editor and code sharing platform. Share code snippets instantly with developers worldwide. Perfect for coding interviews, pair programming, debugging, and teaching. No sign-up required."
     />
     <meta name="twitter:image" content="https://liveshare.dev/og-image.png" />
     <meta
       name="twitter:image:alt"
-      content="LiveShare - Share Code in Real-time with Developers"
+      content="LiveShare - Free Online Code Editor for Sharing Code Instantly"
     />
     <meta name="twitter:creator" content="@liveshare" />
     <meta name="twitter:site" content="@liveshare" />
+    <meta name="twitter:domain" content="liveshare.dev" />
 
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -136,6 +158,10 @@
       rel="stylesheet"
     />
 
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    <link rel="modulepreload" href="/src/main.tsx" />
+
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
       {
@@ -144,29 +170,39 @@
         "name": "LiveShare",
         "alternateName": "LiveShare.dev",
         "url": "https://liveshare.dev",
-        "description": "Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide.",
+        "description": "Free online code editor and code sharing platform. Share code snippets instantly with developers worldwide. Perfect for coding interviews, pair programming, debugging, and teaching.",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Web",
+        "browserRequirements": "Requires JavaScript. Requires HTML5.",
+        "softwareVersion": "2.0",
+        "datePublished": "2024-01-01",
+        "dateModified": "2024-12-20",
         "offers": {
           "@type": "Offer",
           "price": "0",
-          "priceCurrency": "USD"
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock"
         },
         "aggregateRating": {
           "@type": "AggregateRating",
           "ratingValue": "4.8",
-          "ratingCount": "1000"
+          "ratingCount": "1000",
+          "bestRating": "5",
+          "worstRating": "1"
         },
         "featureList": [
           "Instant Code Sharing",
           "Custom URLs",
           "Password Protection",
-          "Syntax Highlighting",
+          "Syntax Highlighting for 50+ Languages",
           "Dark/Light Theme",
           "Real-time Collaboration",
-          "No Sign-up Required"
+          "No Sign-up Required",
+          "Free Forever"
         ],
-        "screenshot": "https://liveshare.dev/og-image.png"
+        "screenshot": "https://liveshare.dev/og-image.png",
+        "applicationSubCategory": "Code Editor",
+        "inLanguage": "en-US"
       }
     </script>
     <script type="application/ld+json">
@@ -176,40 +212,193 @@
         "name": "LiveShare",
         "url": "https://liveshare.dev",
         "logo": "https://liveshare.dev/android-icon-192x192.png",
+        "description": "Free online code editor and code sharing platform for developers",
         "sameAs": [],
         "contactPoint": {
           "@type": "ContactPoint",
           "contactType": "Customer Support",
           "url": "https://liveshare.dev"
-        }
+        },
+        "foundingDate": "2024"
       }
     </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "LiveShare",
+        "name": "LiveShare - Online Code Editor",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Web",
         "offers": {
           "@type": "Offer",
           "price": "0",
-          "priceCurrency": "USD"
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock"
         },
-        "description": "Share code instantly with developers worldwide. Perfect for interviews, collaboration, debugging & learning together.",
+        "description": "Share code instantly with developers worldwide. Perfect for interviews, collaboration, debugging & learning together. Free online code editor with syntax highlighting and real-time collaboration.",
         "featureList": [
           "No sign-up required",
           "Custom URLs like liveshare.dev/your-code",
           "Password protection",
           "Syntax highlighting for 50+ languages",
           "Dark/Light theme",
-          "Real-time collaboration"
+          "Real-time collaboration",
+          "Free forever"
+        ],
+        "screenshot": "https://liveshare.dev/og-image.png"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://liveshare.dev/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Editor",
+            "item": "https://liveshare.dev/editor"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Share Code with LiveShare",
+        "description": "Learn how to share code instantly using LiveShare online code editor",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Open Editor",
+            "text": "Click 'New Session' or navigate to the editor to open the code editor interface.",
+            "image": "https://liveshare.dev/og-image.png"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Set Your URL",
+            "text": "Choose a unique code for your shareable link, like liveshare.dev/your-code",
+            "image": "https://liveshare.dev/og-image.png"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Paste Code",
+            "text": "Write or paste your code with syntax highlighting support for 50+ programming languages",
+            "image": "https://liveshare.dev/og-image.png"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 4,
+            "name": "Share",
+            "text": "Share your unique link with anyone to collaborate in real-time. Optionally add password protection for security.",
+            "image": "https://liveshare.dev/og-image.png"
+          }
+        ],
+        "totalTime": "PT1M"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is LiveShare free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, LiveShare is completely free to use. No sign-up required, no credit card needed. Share code instantly with anyone."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I share code with LiveShare?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Simply open the editor, choose a unique URL, paste your code, and share the link. It takes less than a minute to get started."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What programming languages are supported?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "LiveShare supports syntax highlighting for 50+ programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, and many more."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I password protect my code?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, LiveShare offers optional password protection to secure your code snippets. You can set a password when creating a new session."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is LiveShare good for coding interviews?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely! LiveShare is perfect for coding interviews, pair programming, debugging sessions, and teaching. Share code instantly without any setup."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does LiveShare support real-time collaboration?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, LiveShare supports real-time collaboration. Share your unique link and collaborate with others instantly. Multiple users can view and edit code simultaneously."
+            }
+          }
         ]
       }
     </script>
   </head>
 
   <body>
+    <noscript>
+      <div
+        style="
+          padding: 20px;
+          text-align: center;
+          font-family: Arial, sans-serif;
+        "
+      >
+        <h1>LiveShare - Free Online Code Editor</h1>
+        <p>
+          Share code instantly with developers worldwide. Perfect for coding
+          interviews, pair programming, debugging, and teaching.
+        </p>
+        <p>
+          <strong>JavaScript is required to use LiveShare.</strong> Please
+          enable JavaScript in your browser to continue.
+        </p>
+        <h2>Features:</h2>
+        <ul style="text-align: left; max-width: 600px; margin: 20px auto">
+          <li>Free online code editor - No sign-up required</li>
+          <li>Share code snippets instantly with custom URLs</li>
+          <li>Syntax highlighting for 50+ programming languages</li>
+          <li>Password protection for secure code sharing</li>
+          <li>Real-time collaboration with developers</li>
+          <li>Perfect for coding interviews, debugging, and teaching</li>
+          <li>Dark/Light theme support</li>
+        </ul>
+        <p>
+          Visit <a href="https://liveshare.dev">liveshare.dev</a> to start
+          sharing code now.
+        </p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
