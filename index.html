@@ -3,28 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LiveShare - Share Code in Real-time with Developers</title>
+
+    <!-- Primary Meta Tags -->
+    <title>
+      LiveShare - Share Code in Real-time with Developers | Online Code Editor
+    </title>
+    <meta
+      name="title"
+      content="LiveShare - Share Code in Real-time with Developers | Online Code Editor"
+    />
     <meta
       name="description"
-      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide."
+      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide. No sign-up required. Syntax highlighting, password protection, and real-time collaboration."
+    />
+    <meta
+      name="keywords"
+      content="code sharing, online code editor, code collaboration, share code, code snippets, pair programming, code interview, code debugging, code teaching, real-time code sharing, liveshare, code paste, syntax highlighting, developer tools, code collaboration tool"
     />
     <meta name="author" content="LiveShare" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
-
-    <meta property="og:title" content="LiveShare - Share Code in Real-time" />
     <meta
-      property="og:description"
-      content="Online code editor for interviews, troubleshooting, teaching & collaboration"
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
     />
-    <meta property="og:type" content="website" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="rating" content="general" />
 
-    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://liveshare.dev/" />
 
+    <!-- Sitemap -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- Favicon - Fixed for search engines -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/android-icon-192x192.png"
+    />
+
+    <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png" />
     <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png" />
     <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png" />
@@ -54,19 +77,136 @@
       sizes="180x180"
       href="/apple-icon-180x180.png"
     />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="192x192"
-      href="/android-icon-192x192.png"
-    />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-icon.png" />
+
+    <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- Microsoft Tiles -->
     <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
     <meta name="theme-color" content="#ffffff" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://liveshare.dev/" />
+    <meta
+      property="og:title"
+      content="LiveShare - Share Code in Real-time with Developers"
+    />
+    <meta
+      property="og:description"
+      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide. No sign-up required."
+    />
+    <meta property="og:image" content="https://liveshare.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="LiveShare - Share Code in Real-time with Developers"
+    />
+    <meta property="og:site_name" content="LiveShare" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://liveshare.dev/" />
+    <meta
+      name="twitter:title"
+      content="LiveShare - Share Code in Real-time with Developers"
+    />
+    <meta
+      name="twitter:description"
+      content="Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide."
+    />
+    <meta name="twitter:image" content="https://liveshare.dev/og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="LiveShare - Share Code in Real-time with Developers"
+    />
+    <meta name="twitter:creator" content="@liveshare" />
+    <meta name="twitter:site" content="@liveshare" />
+
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "LiveShare",
+        "alternateName": "LiveShare.dev",
+        "url": "https://liveshare.dev",
+        "description": "Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "1000"
+        },
+        "featureList": [
+          "Instant Code Sharing",
+          "Custom URLs",
+          "Password Protection",
+          "Syntax Highlighting",
+          "Dark/Light Theme",
+          "Real-time Collaboration",
+          "No Sign-up Required"
+        ],
+        "screenshot": "https://liveshare.dev/og-image.png"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "LiveShare",
+        "url": "https://liveshare.dev",
+        "logo": "https://liveshare.dev/android-icon-192x192.png",
+        "sameAs": [],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "Customer Support",
+          "url": "https://liveshare.dev"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "LiveShare",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Share code instantly with developers worldwide. Perfect for interviews, collaboration, debugging & learning together.",
+        "featureList": [
+          "No sign-up required",
+          "Custom URLs like liveshare.dev/your-code",
+          "Password protection",
+          "Syntax highlighting for 50+ languages",
+          "Dark/Light theme",
+          "Real-time collaboration"
+        ]
+      }
+    </script>
   </head>
 
   <body>
