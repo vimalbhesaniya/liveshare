@@ -282,15 +282,19 @@ export function TabBar({
               transition-all duration-150 min-w-[100px] max-w-[180px]
               ${
                 activeTabId === tab.id
-                  ? "bg-background shadow-sm"
-                  : "hover:bg-background/50"
+                  ? "bg-background shadow-md ring-2 ring-offset-1"
+                  : "hover:bg-background/50 opacity-60 hover:opacity-100"
               }
               ${dragOverTab === tab.id ? "ring-2 ring-primary" : ""}
               ${draggedTab === tab.id ? "opacity-50" : ""}
             `}
             onClick={() => onTabSelect(tab.id)}
             style={{
-              borderLeft: `3px solid ${tab.color}`,
+              borderLeft: `4px solid ${tab.color}`,
+              ...(activeTabId === tab.id ? { 
+                boxShadow: `0 0 0 2px ${tab.color}40`,
+                borderColor: tab.color,
+              } : {}),
             }}
           >
             <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
@@ -307,7 +311,11 @@ export function TabBar({
               />
             ) : (
               <span
-                className="text-xs font-medium truncate flex-1"
+                className={`text-xs truncate flex-1 ${
+                  activeTabId === tab.id 
+                    ? "font-bold text-foreground" 
+                    : "font-medium text-muted-foreground"
+                }`}
                 onDoubleClick={() => handleDoubleClick(tab)}
               >
                 {tab.name}

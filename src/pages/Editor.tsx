@@ -9,16 +9,65 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Share2, Download, Plus, Minus } from "lucide-react";
+import {
+  Copy,
+  Share2,
+  Download,
+  Plus,
+  Minus,
+  AlertTriangle,
+  Map as MapIcon,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import CodeEditor from "@uiw/react-textarea-code-editor";
+import { useTheme } from "next-themes";
+import Editor, { loader } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
+import * as monaco from "monaco-editor";
+
+// Configure Monaco Editor loader to work with any host/IP
+// This fixes issues when accessing via IP address instead of localhost
+if (typeof window !== "undefined") {
+  // Configure Monaco to use CDN for workers - works from any origin (localhost, IP, domain)
+  loader.config({
+    paths: {
+      vs: "https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs",
+    },
+  });
+}
 import { TabBar, Tab, createNewTab } from "@/components/TabBar";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
   hashPassword,
 } from "@/components/PasswordDialog";
+
+// Map our language names to Monaco language IDs
+const languageMap: Record<string, string> = {
+  javascript: "javascript",
+  typescript: "typescript",
+  python: "python",
+  java: "java",
+  cpp: "cpp",
+  csharp: "csharp",
+  go: "go",
+  rust: "rust",
+  php: "php",
+  ruby: "ruby",
+  swift: "swift",
+  kotlin: "kotlin",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  json: "json",
+  xml: "xml",
+  yaml: "yaml",
+  markdown: "markdown",
+  sql: "sql",
+  shell: "shell",
+  dockerfile: "dockerfile",
+  text: "plaintext",
+};
 
 type UserSelection = {
   userId: string;
@@ -27,7 +76,7 @@ type UserSelection = {
   color: string;
 };
 
-const Editor = () => {
+const EditorPage = () => {
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
   const [tabs, setTabs] = useState<Tab[]>([
@@ -36,7 +85,7 @@ const Editor = () => {
       name: "Tab 1",
       color: "#3b82f6",
       code: "",
-      language: "javascript",
+      language: "text",
     },
   ]);
   const [activeTabId, setActiveTabId] = useState("initial");
@@ -48,6 +97,14 @@ const Editor = () => {
     const saved = localStorage.getItem("liveshare-font-size");
     return saved ? parseInt(saved, 10) : 14;
   });
+  const [showMinimap, setShowMinimap] = useState(() => {
+    const saved = localStorage.getItem("liveshare-minimap");
+    return saved !== "false"; // Default to true
+  });
+
+  // Get app theme and map to Monaco theme
+  const { theme, resolvedTheme } = useTheme();
+  const monacoTheme = resolvedTheme === "dark" ? "vs-dark" : "vs";
 
   const MIN_FONT_SIZE = 10;
   const MAX_FONT_SIZE = 32;
@@ -55,8 +112,9 @@ const Editor = () => {
   const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const broadcastTimeoutRef = useRef<NodeJS.Timeout>();
   const isRemoteUpdateRef = useRef(false);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Track last synced state for merging concurrent edits
@@ -65,6 +123,19 @@ const Editor = () => {
 
   // Get current active tab
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
+
+  // Performance: detect large content using character count (faster than line count)
+  // ~80 chars per line average, so 2000 lines ≈ 160,000 chars
+  const LARGE_FILE_CHAR_THRESHOLD = 100000; // ~1250 lines
+  const VERY_LARGE_FILE_THRESHOLD = 300000; // ~3750 lines - use plain textarea
+
+  const codeLength = activeTab?.code?.length || 0;
+  const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
+  const isVeryLargeFile = codeLength > VERY_LARGE_FILE_THRESHOLD;
+
+  // Use ref for pending code to avoid state updates on every keystroke for large files
+  const pendingCodeRef = useRef<string | null>(null);
+  const stateUpdateTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Font size handlers
   const increaseFontSize = useCallback(() => {
@@ -101,57 +172,85 @@ const Editor = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [increaseFontSize, decreaseFontSize]);
 
+  // Update editor font size when it changes
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({
+        fontSize: fontSize,
+      });
+    }
+  }, [fontSize]);
+
+  // Update editor theme when app theme changes
+  useEffect(() => {
+    if (editorRef.current && resolvedTheme) {
+      monaco.editor.setTheme(monacoTheme);
+    }
+  }, [monacoTheme, resolvedTheme]);
+
   // Simple line-based merge function for concurrent edits
-  const mergeChanges = (
-    base: string,
-    remote: string,
-    local: string
-  ): string => {
-    if (base === local) return remote;
-    if (base === remote) return local;
-    if (remote === local) return local;
+  // Optimized for large files with early returns
+  const mergeChanges = useCallback(
+    (base: string, remote: string, local: string): string => {
+      // Fast path: if any two are equal, return the different one
+      if (base === local) return remote;
+      if (base === remote) return local;
+      if (remote === local) return local;
 
-    const baseLines = base.split("\n");
-    const remoteLines = remote.split("\n");
-    const localLines = local.split("\n");
+      // For very large content (>500KB), skip complex merge and prefer local
+      const MAX_MERGE_SIZE = 500000;
+      if (
+        base.length > MAX_MERGE_SIZE ||
+        remote.length > MAX_MERGE_SIZE ||
+        local.length > MAX_MERGE_SIZE
+      ) {
+        // For very large files, prefer local changes to avoid expensive merge
+        return local;
+      }
 
-    const mergedLines: string[] = [];
-    const maxLen = Math.max(
-      baseLines.length,
-      remoteLines.length,
-      localLines.length
-    );
+      const baseLines = base.split("\n");
+      const remoteLines = remote.split("\n");
+      const localLines = local.split("\n");
 
-    for (let i = 0; i < maxLen; i++) {
-      const baseLine = baseLines[i] ?? "";
-      const remoteLine = remoteLines[i] ?? "";
-      const localLine = localLines[i] ?? "";
+      const mergedLines: string[] = [];
+      const maxLen = Math.max(
+        baseLines.length,
+        remoteLines.length,
+        localLines.length
+      );
 
-      if (baseLine === localLine && baseLine !== remoteLine) {
-        if (i < remoteLines.length) {
-          mergedLines.push(remoteLine);
-        }
-      } else if (baseLine === remoteLine && baseLine !== localLine) {
-        if (i < localLines.length) {
-          mergedLines.push(localLine);
-        }
-      } else if (baseLine !== localLine && baseLine !== remoteLine) {
-        if (localLine === remoteLine) {
-          mergedLines.push(localLine);
-        } else {
+      for (let i = 0; i < maxLen; i++) {
+        const baseLine = baseLines[i] ?? "";
+        const remoteLine = remoteLines[i] ?? "";
+        const localLine = localLines[i] ?? "";
+
+        if (baseLine === localLine && baseLine !== remoteLine) {
+          if (i < remoteLines.length) {
+            mergedLines.push(remoteLine);
+          }
+        } else if (baseLine === remoteLine && baseLine !== localLine) {
           if (i < localLines.length) {
             mergedLines.push(localLine);
           }
-        }
-      } else {
-        if (i < Math.max(remoteLines.length, localLines.length)) {
-          mergedLines.push(baseLine);
+        } else if (baseLine !== localLine && baseLine !== remoteLine) {
+          if (localLine === remoteLine) {
+            mergedLines.push(localLine);
+          } else {
+            if (i < localLines.length) {
+              mergedLines.push(localLine);
+            }
+          }
+        } else {
+          if (i < Math.max(remoteLines.length, localLines.length)) {
+            mergedLines.push(baseLine);
+          }
         }
       }
-    }
 
-    return mergedLines.join("\n");
-  };
+      return mergedLines.join("\n");
+    },
+    []
+  );
 
   // Generate random unique code
   const generateUniqueCode = () => {
@@ -229,7 +328,7 @@ const Editor = () => {
                 name: "Tab 1",
                 color: "#3b82f6",
                 code: loadedCode,
-                language: data.language || "javascript",
+                language: data.language || "text",
               },
             ]);
             setIsAuthenticated(true);
@@ -242,7 +341,7 @@ const Editor = () => {
               name: "Tab 1",
               color: "#3b82f6",
               code: loadedCode,
-              language: data.language || "javascript",
+              language: data.language || "text",
             },
           ]);
           setIsAuthenticated(true);
@@ -253,7 +352,7 @@ const Editor = () => {
           name: "Tab 1",
           color: "#3b82f6",
           code: "// Welcome to LiveShare!\n// Start typing here...\n",
-          language: "javascript",
+          language: "text",
         };
 
         const { data: newSnippet, error: insertError } = await supabase
@@ -265,7 +364,7 @@ const Editor = () => {
               activeTabId: "initial",
               passwordHash: null,
             }),
-            language: "javascript",
+            language: "text",
           })
           .select()
           .single();
@@ -318,10 +417,59 @@ const Editor = () => {
           try {
             const parsed = JSON.parse(remoteCode);
             if (parsed.tabs && Array.isArray(parsed.tabs)) {
-              setTabs(parsed.tabs);
-              if (parsed.activeTabId) {
-                setActiveTabId(parsed.activeTabId);
-              }
+              // Merge tabs instead of overwriting to handle concurrent edits
+              setTabs((currentTabs) => {
+                const remoteTabs = parsed.tabs as Tab[];
+
+                // Create a map of remote tabs for easy lookup
+                const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
+                const currentTabMap = new Map(
+                  currentTabs.map((t) => [t.id, t])
+                );
+
+                // Merge: for each tab, merge code if both versions exist
+                const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
+                  const currentTab = currentTabMap.get(remoteTab.id);
+
+                  if (currentTab) {
+                    // Find the base version for this tab from last synced state
+                    let baseCode = "";
+                    try {
+                      const lastSynced = JSON.parse(lastSyncedCodeRef.current);
+                      const baseTab = lastSynced.tabs?.find(
+                        (t: Tab) => t.id === remoteTab.id
+                      );
+                      baseCode = baseTab?.code || "";
+                    } catch {
+                      baseCode = currentTab.code;
+                    }
+
+                    // Merge the code changes
+                    const mergedCode = mergeChanges(
+                      baseCode,
+                      remoteTab.code,
+                      currentTab.code
+                    );
+
+                    return {
+                      ...remoteTab,
+                      code: mergedCode,
+                    };
+                  }
+
+                  return remoteTab;
+                });
+
+                // Add any local-only tabs that don't exist remotely (newly created)
+                currentTabs.forEach((currentTab) => {
+                  if (!remoteTabMap.has(currentTab.id)) {
+                    mergedTabs.push(currentTab);
+                  }
+                });
+
+                return mergedTabs;
+              });
+              // Don't change active tab - let each user keep their own focus
             }
           } catch {
             // Legacy format handling
@@ -331,17 +479,62 @@ const Editor = () => {
         }
       )
       .on("broadcast", { event: "tabs_update" }, (payload) => {
-        const {
-          tabs: remoteTabs,
-          activeTabId: remoteActiveTabId,
-          senderId,
-        } = payload.payload;
+        const { tabs: remoteTabs, senderId } = payload.payload;
 
         if (senderId === myUserId) return;
 
         isRemoteUpdateRef.current = true;
-        setTabs(remoteTabs);
-        // Don't change active tab for other users - let them keep their own
+
+        // Merge tabs instead of overwriting to preserve local edits
+        setTabs((currentTabs) => {
+          const remoteTabMap = new Map(
+            (remoteTabs as Tab[]).map((t) => [t.id, t])
+          );
+          const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
+
+          // Merge: preserve local code for tabs being edited
+          const mergedTabs: Tab[] = (remoteTabs as Tab[]).map((remoteTab) => {
+            const currentTab = currentTabMap.get(remoteTab.id);
+
+            if (currentTab) {
+              // Find base version for merging
+              let baseCode = "";
+              try {
+                const lastSynced = JSON.parse(lastSyncedCodeRef.current);
+                const baseTab = lastSynced.tabs?.find(
+                  (t: Tab) => t.id === remoteTab.id
+                );
+                baseCode = baseTab?.code || "";
+              } catch {
+                baseCode = currentTab.code;
+              }
+
+              // Merge the code
+              const mergedCode = mergeChanges(
+                baseCode,
+                remoteTab.code,
+                currentTab.code
+              );
+
+              return {
+                ...remoteTab,
+                code: mergedCode,
+              };
+            }
+
+            return remoteTab;
+          });
+
+          // Add any local-only tabs
+          currentTabs.forEach((currentTab) => {
+            if (!remoteTabMap.has(currentTab.id)) {
+              mergedTabs.push(currentTab);
+            }
+          });
+
+          return mergedTabs;
+        });
+        // Don't change active tab for other users - let them keep their own focus
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
@@ -371,8 +564,18 @@ const Editor = () => {
 
     return () => {
       supabase.removeChannel(channel);
+      // Clean up timeouts
+      if (broadcastTimeoutRef.current) {
+        clearTimeout(broadcastTimeoutRef.current);
+      }
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      if (stateUpdateTimeoutRef.current) {
+        clearTimeout(stateUpdateTimeoutRef.current);
+      }
     };
-  }, [urlCode, myUserId]);
+  }, [urlCode, myUserId, mergeChanges]);
 
   // Update database when tabs change (with debouncing)
   const updateDatabase = async (newTabs: Tab[]) => {
@@ -420,7 +623,8 @@ const Editor = () => {
         .then(() => {
           toast({
             title: "Code Protected!",
-            description: "Share the password with people you want to give access.",
+            description:
+              "Share the password with people you want to give access.",
           });
         });
     } else {
@@ -456,25 +660,83 @@ const Editor = () => {
   };
 
   const handleCodeChange = (newCode: string) => {
+    // Use character length for fast size detection (no split needed)
+    const contentLength = newCode.length;
+    const isLarge = contentLength > LARGE_FILE_CHAR_THRESHOLD;
+    const isVeryLarge = contentLength > VERY_LARGE_FILE_THRESHOLD;
+
+    if (isRemoteUpdateRef.current) {
+      isRemoteUpdateRef.current = false;
+      // Still update state for remote changes
+      const newTabs = tabs.map((tab) =>
+        tab.id === activeTabId ? { ...tab, code: newCode } : tab
+      );
+      setTabs(newTabs);
+      return;
+    }
+
+    // For very large files, debounce state updates to prevent UI freeze
+    if (isVeryLarge) {
+      pendingCodeRef.current = newCode;
+
+      if (stateUpdateTimeoutRef.current) {
+        clearTimeout(stateUpdateTimeoutRef.current);
+      }
+
+      // Debounce state update for very large files
+      stateUpdateTimeoutRef.current = setTimeout(() => {
+        if (pendingCodeRef.current !== null) {
+          const newTabs = tabs.map((tab) =>
+            tab.id === activeTabId
+              ? { ...tab, code: pendingCodeRef.current! }
+              : tab
+          );
+          setTabs(newTabs);
+
+          // Update database with longer debounce
+          if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
+          }
+          updateTimeoutRef.current = setTimeout(() => {
+            updateDatabase(newTabs);
+          }, 2000);
+
+          pendingCodeRef.current = null;
+        }
+      }, 150); // Small debounce for state update
+
+      // Skip broadcasts entirely for very large files
+      return;
+    }
+
+    // Normal flow for smaller files
     const newTabs = tabs.map((tab) =>
       tab.id === activeTabId ? { ...tab, code: newCode } : tab
     );
     setTabs(newTabs);
 
-    if (isRemoteUpdateRef.current) {
-      isRemoteUpdateRef.current = false;
-      return;
+    if (broadcastTimeoutRef.current) {
+      clearTimeout(broadcastTimeoutRef.current);
     }
 
-    broadcastTabsUpdate(newTabs, activeTabId);
+    // For large files, debounce broadcasts; for small files, broadcast immediately
+    if (isLarge) {
+      broadcastTimeoutRef.current = setTimeout(() => {
+        broadcastTabsUpdate(newTabs, activeTabId);
+      }, 1000);
+    } else {
+      broadcastTabsUpdate(newTabs, activeTabId);
+    }
 
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
 
+    // Increase debounce time for large files
+    const debounceTime = isLarge ? 1500 : 300;
     updateTimeoutRef.current = setTimeout(() => {
       updateDatabase(newTabs);
-    }, 300);
+    }, debounceTime);
   };
 
   const handleLanguageChange = (newLanguage: string) => {
@@ -546,28 +808,47 @@ const Editor = () => {
     () => `hsl(${Math.random() * 360}, 70%, 60%)`
   );
 
-  const handleSelection = async () => {
-    if (!editorRef.current || !urlCode || !channelRef.current) return;
+  // Handle Monaco editor mount
+  const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
+    editorRef.current = editor;
 
-    const start = editorRef.current.selectionStart;
-    const end = editorRef.current.selectionEnd;
+    // Register custom commands for font size shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.UpArrow, () => {
+      increaseFontSize();
+    });
 
-    if (start !== end) {
-      await channelRef.current.track({
-        userId: myUserId,
-        selection: {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.DownArrow, () => {
+      decreaseFontSize();
+    });
+
+    // Set up selection change listener
+    editor.onDidChangeCursorSelection((e) => {
+      if (!urlCode || !channelRef.current) return;
+
+      const selection = e.selection;
+      const model = editor.getModel();
+      if (!model) return;
+
+      const start = model.getOffsetAt(selection.getStartPosition());
+      const end = model.getOffsetAt(selection.getEndPosition());
+
+      if (start !== end) {
+        channelRef.current.track({
           userId: myUserId,
-          start,
-          end,
-          color: mySelectionColor,
-        },
-      });
-    } else {
-      await channelRef.current.track({
-        userId: myUserId,
-        selection: null,
-      });
-    }
+          selection: {
+            userId: myUserId,
+            start,
+            end,
+            color: mySelectionColor,
+          },
+        });
+      } else {
+        channelRef.current.track({
+          userId: myUserId,
+          selection: null,
+        });
+      }
+    });
   };
 
   const handleShare = () => {
@@ -592,10 +873,35 @@ const Editor = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const ext =
-      activeTab?.language === "javascript"
-        ? "js"
-        : activeTab?.language || "txt";
+
+    // Map language to file extension
+    const extMap: Record<string, string> = {
+      javascript: "js",
+      typescript: "ts",
+      python: "py",
+      java: "java",
+      cpp: "cpp",
+      csharp: "cs",
+      go: "go",
+      rust: "rs",
+      php: "php",
+      ruby: "rb",
+      swift: "swift",
+      kotlin: "kt",
+      html: "html",
+      css: "css",
+      scss: "scss",
+      json: "json",
+      xml: "xml",
+      yaml: "yaml",
+      markdown: "md",
+      sql: "sql",
+      shell: "sh",
+      dockerfile: "dockerfile",
+      text: "txt",
+    };
+
+    const ext = extMap[activeTab?.language || "text"] || "txt";
     a.download = `${activeTab?.name || "code"}.${ext}`;
     a.click();
     toast({
@@ -640,15 +946,30 @@ const Editor = () => {
               <SelectTrigger className="w-[130px] sm:w-[180px]">
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="text">Simple Text</SelectItem>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="text">Plain Text</SelectItem>
                 <SelectItem value="javascript">JavaScript</SelectItem>
                 <SelectItem value="typescript">TypeScript</SelectItem>
                 <SelectItem value="python">Python</SelectItem>
                 <SelectItem value="java">Java</SelectItem>
                 <SelectItem value="cpp">C++</SelectItem>
+                <SelectItem value="csharp">C#</SelectItem>
+                <SelectItem value="go">Go</SelectItem>
+                <SelectItem value="rust">Rust</SelectItem>
+                <SelectItem value="php">PHP</SelectItem>
+                <SelectItem value="ruby">Ruby</SelectItem>
+                <SelectItem value="swift">Swift</SelectItem>
+                <SelectItem value="kotlin">Kotlin</SelectItem>
                 <SelectItem value="html">HTML</SelectItem>
                 <SelectItem value="css">CSS</SelectItem>
+                <SelectItem value="scss">SCSS</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="xml">XML</SelectItem>
+                <SelectItem value="yaml">YAML</SelectItem>
+                <SelectItem value="markdown">Markdown</SelectItem>
+                <SelectItem value="sql">SQL</SelectItem>
+                <SelectItem value="shell">Shell/Bash</SelectItem>
+                <SelectItem value="dockerfile">Dockerfile</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -678,6 +999,23 @@ const Editor = () => {
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
+
+            {/* Minimap Toggle */}
+            <Button
+              variant={showMinimap ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setShowMinimap((prev) => {
+                  const newValue = !prev;
+                  localStorage.setItem("liveshare-minimap", String(newValue));
+                  return newValue;
+                });
+              }}
+              className="px-2 sm:px-3"
+              title={showMinimap ? "Hide Minimap" : "Show Minimap"}
+            >
+              <MapIcon className="h-4 w-4 " />
+            </Button>
 
             <SetPasswordDialog
               isProtected={!!passwordHash}
@@ -722,76 +1060,74 @@ const Editor = () => {
 
         {/* Code Editor */}
         <div
-          className="rounded-b-lg border border-border shadow-2xl relative overflow-auto"
-          style={{ height: "calc(100vh - 300px)" }}
+          className="rounded-b-lg border border-t-0 border-border shadow-2xl overflow-hidden"
+          style={{
+            height: isLargeFile ? "calc(100vh - 340px)" : "calc(100vh - 300px)",
+          }}
         >
-          <CodeEditor
+          <Editor
+            height="100%"
+            language={
+              languageMap[activeTab?.language || "javascript"] || "plaintext"
+            }
             value={activeTab?.code || ""}
-            language={activeTab?.language || "javascript"}
-            placeholder="Start typing your code..."
-            onChange={(evn) => handleCodeChange(evn.target.value)}
-            onSelect={handleSelection}
-            onClick={handleSelection}
-            onBlur={handleSelection}
-            onKeyUp={handleSelection}
-            ref={editorRef as React.RefObject<HTMLTextAreaElement>}
-            padding={12}
-            className="code-editor-responsive"
-            data-color-mode="dark"
-            style={{
+            onChange={(value) => handleCodeChange(value || "")}
+            onMount={handleEditorMount}
+            theme={monacoTheme}
+            options={{
               fontSize: fontSize,
-              backgroundColor: "#1e293b",
-              color: "#e2e8f0",
               fontFamily:
                 "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-              minHeight: "100%",
+              minimap: { enabled: showMinimap },
+              scrollbar: {
+                vertical: "auto",
+                horizontal: "auto",
+                verticalScrollbarSize: 6,
+                horizontalScrollbarSize: 6,
+              },
+              lineNumbers: "on",
+              wordWrap: "on",
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              padding: { top: 12, bottom: 12 },
+              renderWhitespace: "selection",
+              bracketPairColorization: { enabled: true },
+              smoothScrolling: true,
+              cursorBlinking: "expand",
+              cursorSmoothCaretAnimation: "on",
+              folding: true,
+              foldingHighlight: true,
+              showFoldingControls: "mouseover",
+              matchBrackets: "always",
+              selectionHighlight: true,
+              occurrencesHighlight: "singleFile",
+              renderLineHighlight: "all",
+              contextmenu: true,
+              quickSuggestions: activeTab?.language !== "text",
+              suggestOnTriggerCharacters: activeTab?.language !== "text",
+              tabSize: 2,
+              insertSpaces: true,
+              detectIndentation: true,
+              trimAutoWhitespace: true,
+              formatOnPaste: false,
+              formatOnType: false,
+              // Performance optimizations for large files
+              ...(isLargeFile && {
+                renderValidationDecorations: "off",
+                quickSuggestions: false,
+                suggestOnTriggerCharacters: false,
+                wordBasedSuggestions: "off",
+                parameterHints: { enabled: false },
+                folding: false,
+                renderWhitespace: "none",
+              }),
             }}
+            loading={
+              <div className="flex items-center justify-center h-full bg-slate-800">
+                <div className="text-muted-foreground">Loading editor...</div>
+              </div>
+            }
           />
-          {userSelections.map((selection, idx) => {
-            const code = activeTab?.code || "";
-            const beforeText = code.substring(0, selection.start);
-            const selectedText = code.substring(selection.start, selection.end);
-            const beforeLines = beforeText.split("\n");
-            const startLine = beforeLines.length - 1;
-            const startCol = beforeLines[beforeLines.length - 1].length;
-
-            // Calculate dimensions based on font size
-            const charWidth = fontSize * 0.6;
-            const lineHeight = fontSize * 1.5;
-            const padding = 12;
-
-            // Handle multi-line selections
-            const selectedLines = selectedText.split("\n");
-
-            return selectedLines.map((lineText, lineIdx) => {
-              const isFirstLine = lineIdx === 0;
-              const isLastLine = lineIdx === selectedLines.length - 1;
-              const currentLine = startLine + lineIdx;
-              const colStart = isFirstLine ? startCol : 0;
-              const lineLength = lineText.length;
-
-              // Skip empty lines at the end
-              if (lineLength === 0 && isLastLine && selectedLines.length > 1) {
-                return null;
-              }
-
-              return (
-                <div
-                  key={`${idx}-${lineIdx}`}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${padding + colStart * charWidth}px`,
-                    top: `${padding + currentLine * lineHeight}px`,
-                    width: `${Math.max(lineLength * charWidth, 4)}px`,
-                    height: `${lineHeight}px`,
-                    backgroundColor: selection.color,
-                    opacity: 0.35,
-                    borderRadius: "2px",
-                  }}
-                />
-              );
-            });
-          })}
         </div>
 
         {/* Footer text */}
@@ -806,4 +1142,4 @@ const Editor = () => {
   );
 };
 
-export default Editor;
+export default EditorPage;
