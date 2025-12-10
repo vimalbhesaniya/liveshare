@@ -254,7 +254,7 @@ const EditorPage = () => {
 
   // Generate random unique code
   const generateUniqueCode = () => {
-    return Math.random().toString(36).substring(2, 8);
+    return Math.random().toString(36).substring(2, 10);
   };
 
   // Broadcast tabs update to other users
@@ -267,6 +267,24 @@ const EditorPage = () => {
           payload: {
             tabs: newTabs,
             activeTabId: newActiveTabId,
+            senderId: myUserId,
+          },
+        });
+      }
+    },
+    [myUserId]
+  );
+
+  // Broadcast code changes to other users for real-time collaboration
+  const broadcastCodeChange = useCallback(
+    (tabId: string, code: string) => {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "code_change",
+          payload: {
+            tabId,
+            code,
             senderId: myUserId,
           },
         });
@@ -536,6 +554,23 @@ const EditorPage = () => {
         });
         // Don't change active tab for other users - let them keep their own focus
       })
+      .on("broadcast", { event: "code_change" }, (payload) => {
+        const { tabId, code, senderId } = payload.payload;
+
+        if (senderId === myUserId) return;
+
+        isRemoteUpdateRef.current = true;
+
+        // Update the specific tab with the new code
+        setTabs((currentTabs) => {
+          return currentTabs.map((tab) => {
+            if (tab.id === tabId) {
+              return { ...tab, code };
+            }
+            return tab;
+          });
+        });
+      })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const selections: UserSelection[] = [];
@@ -675,6 +710,9 @@ const EditorPage = () => {
       return;
     }
 
+    // Always broadcast code changes immediately for real-time collaboration
+    broadcastCodeChange(activeTabId, newCode);
+
     // For very large files, debounce state updates to prevent UI freeze
     if (isVeryLarge) {
       pendingCodeRef.current = newCode;
@@ -705,7 +743,17 @@ const EditorPage = () => {
         }
       }, 150); // Small debounce for state update
 
-      // Skip broadcasts entirely for very large files
+      // For very large files, debounce tab broadcasts but still broadcast code changes
+      if (broadcastTimeoutRef.current) {
+        clearTimeout(broadcastTimeoutRef.current);
+      }
+      broadcastTimeoutRef.current = setTimeout(() => {
+        const newTabs = tabs.map((tab) =>
+          tab.id === activeTabId ? { ...tab, code: newCode } : tab
+        );
+        broadcastTabsUpdate(newTabs, activeTabId);
+      }, 1000);
+
       return;
     }
 
@@ -719,7 +767,7 @@ const EditorPage = () => {
       clearTimeout(broadcastTimeoutRef.current);
     }
 
-    // For large files, debounce broadcasts; for small files, broadcast immediately
+    // For large files, debounce tab broadcasts; for small files, broadcast immediately
     if (isLarge) {
       broadcastTimeoutRef.current = setTimeout(() => {
         broadcastTabsUpdate(newTabs, activeTabId);
@@ -850,6 +898,57 @@ const EditorPage = () => {
       }
     });
   };
+
+  // Update Monaco decorations when user selections change
+  useEffect(() => {
+    if (!editorRef.current || !activeTab) return;
+
+    const editor = editorRef.current;
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Create decorations for each user's selection
+    const decorations: monaco.editor.IModelDeltaDecoration[] = [];
+
+    userSelections.forEach((selection) => {
+      if (!selection || selection.start === selection.end) return;
+
+      try {
+        const startPos = model.getPositionAt(selection.start);
+        const endPos = model.getPositionAt(selection.end);
+
+        // Create a consistent CSS class based on user ID
+        const userIndex = selection.userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 10;
+        const userColorClass = `remote-selection-user-${userIndex}`;
+
+        decorations.push({
+          range: new monaco.Range(
+            startPos.lineNumber,
+            startPos.column,
+            endPos.lineNumber,
+            endPos.column
+          ),
+          options: {
+            className: 'remote-user-selection',
+            inlineClassName: userColorClass,
+            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          },
+        });
+      } catch (error) {
+        console.warn('Error creating selection decoration:', error);
+      }
+    });
+
+    // Apply decorations to the editor
+    const decorationIds = editor.deltaDecorations([], decorations);
+
+    // Clean up decorations on unmount or when selections change
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.deltaDecorations(decorationIds, []);
+      }
+    };
+  }, [userSelections, activeTab]);
 
   const handleShare = () => {
     const shareUrl = window.location.href;

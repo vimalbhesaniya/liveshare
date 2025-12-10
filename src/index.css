@@ -434,8 +434,59 @@ a:not(button):not(.no-hover-effect):hover {
   .glow-on-hover {
     transition: box-shadow 0.3s ease, transform 0.3s ease;
   }
-  
+
   .glow-on-hover:hover {
     box-shadow: 0 0 30px hsl(351 83% 54% / 0.3);
   }
 }
+
+/* Remote User Selection Highlighting */
+.remote-user-selection {
+  position: relative;
+  border-radius: 2px;
+  opacity: 0.7;
+  mix-blend-mode: multiply;
+}
+
+.remote-user-selection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 2px;
+  border: 1px solid;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Generate styles for different user colors */
+.remote-selection-user-0 { background-color: hsl(0, 70%, 60%, 0.3); }
+.remote-selection-user-0::before { border-color: hsl(0, 70%, 60%, 0.6); }
+
+.remote-selection-user-1 { background-color: hsl(60, 70%, 60%, 0.3); }
+.remote-selection-user-1::before { border-color: hsl(60, 70%, 60%, 0.6); }
+
+.remote-selection-user-2 { background-color: hsl(120, 70%, 60%, 0.3); }
+.remote-selection-user-2::before { border-color: hsl(120, 70%, 60%, 0.6); }
+
+.remote-selection-user-3 { background-color: hsl(180, 70%, 60%, 0.3); }
+.remote-selection-user-3::before { border-color: hsl(180, 70%, 60%, 0.6); }
+
+.remote-selection-user-4 { background-color: hsl(240, 70%, 60%, 0.3); }
+.remote-selection-user-4::before { border-color: hsl(240, 70%, 60%, 0.6); }
+
+.remote-selection-user-5 { background-color: hsl(300, 70%, 60%, 0.3); }
+.remote-selection-user-5::before { border-color: hsl(300, 70%, 60%, 0.6); }
+
+/* Default fallback for additional users */
+.remote-selection-user-6,
+.remote-selection-user-7,
+.remote-selection-user-8,
+.remote-selection-user-9 { background-color: hsl(30, 70%, 60%, 0.3); }
+
+.remote-selection-user-6::before,
+.remote-selection-user-7::before,
+.remote-selection-user-8::before,
+.remote-selection-user-9::before { border-color: hsl(30, 70%, 60%, 0.6); }

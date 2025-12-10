@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { FeatureCard } from "@/components/FeatureCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useNavigateToRandomEditor } from "@/hooks/use-random-editor";
 import {
   Users,
   Video,
@@ -29,6 +30,7 @@ const typingTexts = [
 ];
 
 const Index = () => {
+  const navigateToRandomEditor = useNavigateToRandomEditor();
   const [textIndex, setTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -124,11 +126,11 @@ const Index = () => {
             </p>
             <div className="scroll-animate animate-in delay-2 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
-                asChild
+                onClick={navigateToRandomEditor}
                 size="lg"
                 className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
-                <Link to="/editor">Share Code Now</Link>
+                Share Code Now
               </Button>
               <p className="text-sm text-muted-foreground">
                 Share code for free.
@@ -311,11 +313,11 @@ const Index = () => {
           </p>
           <div className="scroll-animate delay-2">
             <Button
-              asChild
+              onClick={navigateToRandomEditor}
               size="lg"
               className="text-lg px-8 py-6 bg-primary hover:bg-primary/90"
             >
-              <Link to="/editor">Create Free Session</Link>
+              Create Free Session
             </Button>
           </div>
         </div>
@@ -403,9 +405,12 @@ const Index = () => {
               <Link to="/" className="hover:text-foreground transition-colors">
                 Home
               </Link>
-              <Link to="/editor" className="hover:text-foreground transition-colors">
+              <button
+                onClick={navigateToRandomEditor}
+                className="hover:text-foreground transition-colors"
+              >
                 Code Editor
-              </Link>
+              </button>
               <a href="https://liveshare.dev" className="hover:text-foreground transition-colors">
                 LiveShare.dev
               </a>
