@@ -2,8 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- Homepage - High Priority -->
   <url>
     <loc>https://liveshare.dev/</loc>
     <lastmod>2024-12-20</lastmod>
@@ -11,15 +14,104 @@
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://liveshare.dev/og-image.png</image:loc>
-      <image:title>LiveShare - Free Online Code Editor</image:title>
+      <image:title>Live Share - Free Online Code Editor</image:title>
       <image:caption>Share code instantly with developers worldwide</image:caption>
+      <image:license>https://liveshare.dev/</image:license>
     </image:image>
   </url>
+
+  <!-- Editor Page -->
   <url>
     <loc>https://liveshare.dev/editor</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <!-- Popular Code Sharing Examples (for SEO) -->
+  <url>
+    <loc>https://liveshare.dev/hello-world</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/react-component</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/python-script</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/algorithm</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/interview</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/debug</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/tutorial</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/collaboration</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/live-share</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>https://liveshare.dev/code-share</loc>
+    <lastmod>2024-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- Video Sitemap for How-to Content -->
+  <url>
+    <loc>https://liveshare.dev/</loc>
+    <video:video>
+      <video:thumbnail_loc>https://liveshare.dev/og-image.png</video:thumbnail_loc>
+      <video:title>How to Live Share Code Instantly</video:title>
+      <video:description>Learn how to use Live Share to share code in real-time with developers worldwide. Perfect for coding interviews, pair programming, and collaboration.</video:description>
+      <video:content_loc>https://liveshare.dev/og-image.png</video:content_loc>
+      <video:duration>60</video:duration>
+      <video:publication_date>2024-12-20</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+      <video:live>no</video:live>
+    </video:video>
   </url>
 </urlset>
 

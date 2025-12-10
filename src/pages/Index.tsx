@@ -22,11 +22,11 @@ import { useState, useEffect } from "react";
 // Cursor spotlight position hook
 
 const typingTexts = [
-  "Share Code in Real-time with Developers",
-  "Collaborate Instantly with Your Team",
-  "Debug Together, Ship Faster",
-  "Learn & Teach Code Seamlessly",
-  "Code Sharing Made Simple & Fast",
+  "Live Share Code with Developers Worldwide",
+  "Real-time Code Collaboration Made Easy",
+  "Share Code Instantly, No Sign-up Required",
+  "Live Code Sharing for Interviews & Teaching",
+  "The Best Way to Live Share Code Online",
 ];
 
 const Index = () => {
@@ -121,8 +121,8 @@ const Index = () => {
               <span className="typing-cursor">|</span>
             </h1>
             <p className="scroll-animate animate-in delay-1 text-sm md:text-xl text-muted-foreground mb-10 leading-relaxed">
-              Share code snippets instantly with anyone. Perfect for
-              collaboration, debugging & learning together.
+              Live share code snippets instantly with developers worldwide. Perfect for
+              real-time collaboration, coding interviews, debugging & teaching together.
             </p>
             <div className="scroll-animate animate-in delay-2 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
@@ -141,13 +141,13 @@ const Index = () => {
       </section>
 
       {/* How to Use LiveShare */}
-      <section className="py-24 bg-card/30">
+      <section id="how-it-works" className="py-24 bg-card/30">
         <div className="container mx-auto px-6">
           <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-center mb-4">
-            How It Works
+            How Live Share Works
           </h2>
           <p className="scroll-animate delay-1 text-muted-foreground text-center mb-16 max-w-2xl mx-auto">
-            Share your code in just 4 simple steps
+            Live share your code in just 4 simple steps
           </p>
 
           <div className="max-w-6xl mx-auto">
@@ -169,7 +169,7 @@ const Index = () => {
                   Open Editor
                 </h3>
                 <p className="text-muted-foreground text-xs md:text-sm">
-                  Click "New Session" to open the code editor
+                  Click "Share Code Now" to live share code
                 </p>
               </div>
 
@@ -226,7 +226,7 @@ const Index = () => {
                   Share
                 </h3>
                 <p className="text-muted-foreground text-xs md:text-sm">
-                  Share your unique link with anyone to collaborate
+                  Live share your unique link for real-time collaboration
                 </p>
               </div>
             </div>
@@ -235,20 +235,20 @@ const Index = () => {
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 container mx-auto px-6">
+      <section id="features" className="py-24 container mx-auto px-6">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="scroll-animate delay-0">
             <FeatureCard
               icon={<Users className="h-10 w-10" />}
-              title="Share with anyone"
-              description="Paste your code, get a unique link, and share it instantly with friends, teammates, or the community."
+              title="Live share with anyone"
+              description="Paste your code, get a unique link, and live share it instantly with developers, teammates, or the community."
             />
           </div>
           <div className="scroll-animate delay-1">
             <FeatureCard
               icon={<Video className="h-10 w-10" />}
-              title="Collaborate easily"
-              description="Share code snippets during meetings, discussions, or troubleshooting sessions. No setup needed."
+              title="Live collaborate easily"
+              description="Live share code snippets during meetings, discussions, or troubleshooting sessions. Real-time collaboration, no setup needed."
             />
           </div>
           <div className="scroll-animate delay-2">
@@ -317,8 +317,55 @@ const Index = () => {
               size="lg"
               className="text-lg px-8 py-6 bg-primary hover:bg-primary/90"
             >
-              Create Free Session
+              Live Share Code Now
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* What is Live Code Sharing Section */}
+      <section id="live-code-sharing" className="py-24 bg-card/30">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-8 text-center">
+            What is Live Code Sharing?
+          </h2>
+          <div className="scroll-animate delay-1 space-y-6 text-muted-foreground">
+            <p className="text-base md:text-lg leading-relaxed">
+              <strong>Live code sharing</strong> is the modern way developers collaborate on code in real-time. Unlike traditional methods like email attachments or file sharing, live code sharing allows you to create instant shareable links that let multiple developers view, edit, and discuss code simultaneously.
+            </p>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Why Live Share is Better Than Traditional Code Sharing
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-lg font-semibold mb-2 text-foreground">Traditional Methods</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>• Email attachments get lost</li>
+                  <li>• GitHub gists are static</li>
+                  <li>• File sharing is cumbersome</li>
+                  <li>• No real-time collaboration</li>
+                  <li>• Difficult to discuss specific lines</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-2 text-foreground">Live Share Benefits</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>• ✅ Instant shareable links</li>
+                  <li>• ✅ Real-time collaboration</li>
+                  <li>• ✅ Syntax highlighting</li>
+                  <li>• ✅ Password protection</li>
+                  <li>• ✅ No sign-up required</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
+              Perfect for Live Coding Scenarios
+            </h3>
+            <p className="text-base md:text-lg leading-relaxed">
+              Live Share excels in scenarios where real-time code collaboration is essential. Whether you're conducting live coding interviews, debugging issues with your team, teaching programming concepts, or getting help from the developer community, Live Share makes it effortless to share code instantly.
+            </p>
           </div>
         </div>
       </section>
@@ -326,68 +373,68 @@ const Index = () => {
       {/* SEO Content Section - Rich Text for Search Engines */}
       <section className="py-24 container mx-auto px-6 max-w-4xl">
         <article className="prose prose-lg dark:prose-invert max-w-none">
-          <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-6">
-            The Best Free Online Code Editor for Sharing Code Instantly
-          </h2>
+            <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-6">
+              Live Share Code Instantly - The Best Free Online Code Editor
+            </h2>
           <div className="scroll-animate delay-1 space-y-6 text-muted-foreground">
             <p className="text-base md:text-lg leading-relaxed">
-              <strong>LiveShare</strong> is a free online code editor and code sharing platform designed for developers, programmers, and software engineers who need to share code snippets quickly and efficiently. Whether you're conducting coding interviews, debugging with your team, teaching programming concepts, or collaborating on projects, LiveShare makes it easy to share code instantly without any sign-up or installation required.
+              <strong>Live Share</strong> is a free online code editor and live code sharing platform designed for developers, programmers, and software engineers who need to live share code snippets quickly and efficiently. Whether you're conducting coding interviews, debugging with your team, teaching programming concepts, or collaborating on projects, Live Share makes it easy to live share code instantly without any sign-up or installation required.
             </p>
             
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
               Why Use an Online Code Editor for Code Sharing?
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              Traditional code sharing methods like email attachments, GitHub gists, or messaging apps can be cumbersome and slow. With LiveShare's online code editor, you can create a shareable link in seconds. Our web-based code editor supports syntax highlighting for over 50 programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, PHP, Ruby, and many more. This makes it perfect for code reviews, pair programming sessions, technical interviews, and educational purposes.
+              Traditional code sharing methods like email attachments, GitHub gists, or messaging apps can be cumbersome and slow. With Live Share's online code editor, you can live share code with a link in seconds. Our web-based code editor supports syntax highlighting for over 50 programming languages including JavaScript, Python, Java, C++, TypeScript, Go, Rust, PHP, Ruby, and many more. This makes it perfect for live code reviews, real-time pair programming sessions, technical interviews, and educational purposes.
             </p>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
-              Perfect for Coding Interviews and Technical Assessments
+              Perfect for Live Coding Interviews and Technical Assessments
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              LiveShare is widely used by hiring managers and technical recruiters for conducting coding interviews. The real-time collaboration features allow interviewers to watch candidates code in real-time, making it easier to assess problem-solving skills and coding abilities. The password protection feature ensures that only authorized participants can access the code session, maintaining the integrity of technical assessments.
+              Live Share is widely used by hiring managers and technical recruiters for conducting live coding interviews. The real-time collaboration features allow interviewers to watch candidates code live, making it easier to assess problem-solving skills and coding abilities. The password protection feature ensures that only authorized participants can access the live code sharing session, maintaining the integrity of technical assessments.
             </p>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
-              Ideal for Pair Programming and Team Collaboration
+              Ideal for Live Pair Programming and Team Collaboration
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              Software development teams use LiveShare for pair programming, code reviews, and debugging sessions. The instant code sharing capability eliminates the need for screen sharing or complex setup procedures. Simply create a session, share the link, and start collaborating. The syntax highlighting and code formatting features make it easy to read and understand code, even when working with unfamiliar codebases.
+              Software development teams use Live Share for live pair programming, real-time code reviews, and debugging sessions. The instant live code sharing capability eliminates the need for screen sharing or complex setup procedures. Simply create a session, share the link, and start live collaborating. The syntax highlighting and code formatting features make it easy to read and understand code, even when working with unfamiliar codebases.
             </p>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
-              Educational Tool for Teaching and Learning Programming
+              Educational Tool for Live Teaching and Learning Programming
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              Teachers and students love LiveShare for its simplicity and effectiveness in educational settings. Programming instructors can share code examples instantly during lectures, while students can share their code for feedback and help. The no-sign-up requirement means students can start using the tool immediately without creating accounts or dealing with authentication issues.
+              Teachers and students love Live Share for its simplicity and effectiveness in educational settings. Programming instructors can live share code examples instantly during lectures, while students can live share their code for feedback and help. The no-sign-up requirement means students can start using the tool immediately without creating accounts or dealing with authentication issues.
             </p>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
               Key Features of Our Free Code Sharing Platform
             </h3>
             <ul className="list-disc list-inside space-y-3 text-base md:text-lg leading-relaxed">
-              <li><strong>Instant Code Sharing:</strong> Create and share code in seconds with custom URLs like liveshare.dev/your-code</li>
-              <li><strong>No Sign-Up Required:</strong> Start sharing code immediately without creating an account</li>
+              <li><strong>Live Code Sharing:</strong> Live share code in seconds with custom URLs like liveshare.dev/your-code</li>
+              <li><strong>No Sign-Up Required:</strong> Start live sharing code immediately without creating an account</li>
               <li><strong>Syntax Highlighting:</strong> Beautiful code highlighting for 50+ programming languages</li>
-              <li><strong>Password Protection:</strong> Secure your code snippets with optional password protection</li>
+              <li><strong>Password Protection:</strong> Secure your live code sharing with optional password protection</li>
               <li><strong>Real-Time Collaboration:</strong> Multiple users can view and edit code simultaneously</li>
-              <li><strong>Dark and Light Themes:</strong> Choose your preferred theme for comfortable coding</li>
+              <li><strong>Dark and Light Themes:</strong> Choose your preferred theme for comfortable live coding</li>
               <li><strong>Free Forever:</strong> All features are completely free with no hidden costs</li>
-              <li><strong>Mobile Friendly:</strong> Access and share code from any device, anywhere</li>
+              <li><strong>Mobile Friendly:</strong> Live share code from any device, anywhere</li>
             </ul>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
-              How to Share Code Online with LiveShare
+              How to Live Share Code Online with Live Share
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              Sharing code with LiveShare is incredibly simple. First, click "New Session" to open our online code editor. Next, choose a unique URL for your code snippet (for example, liveshare.dev/my-algorithm). Then, paste or write your code in the editor. The syntax highlighting will automatically format your code based on the programming language you select. Finally, share the unique link with anyone you want to collaborate with. They can access your code instantly without any setup or installation.
+              Live sharing code with Live Share is incredibly simple. First, click "Share Code Now" to open our online code editor. Next, choose a unique URL for your code snippet (for example, liveshare.dev/my-algorithm). Then, paste or write your code in the editor. The syntax highlighting will automatically format your code based on the programming language you select. Finally, live share the unique link with anyone you want to collaborate with. They can access your live code sharing session instantly without any setup or installation.
             </p>
 
             <h3 className="text-2xl font-semibold mt-8 mb-4 text-foreground">
-              Use Cases: When to Use LiveShare Code Editor
+              Use Cases: When to Live Share Code with Live Share
             </h3>
             <p className="text-base md:text-lg leading-relaxed">
-              LiveShare is perfect for various scenarios including technical interviews, remote pair programming, code debugging sessions, programming tutorials, code reviews, sharing code snippets on forums or social media, teaching programming concepts, collaborative problem-solving, and quick code demonstrations. It's the fastest way to share code online without the complexity of version control systems or code hosting platforms.
+              Live Share is perfect for various scenarios including live coding interviews, remote pair programming, real-time code debugging sessions, programming tutorials, live code reviews, sharing code snippets on forums or social media, teaching programming concepts, collaborative problem-solving, and quick code demonstrations. It's the fastest way to live share code online without the complexity of version control systems or code hosting platforms.
             </p>
           </div>
         </article>
@@ -409,14 +456,20 @@ const Index = () => {
                 onClick={navigateToRandomEditor}
                 className="hover:text-foreground transition-colors"
               >
-                Code Editor
+                Live Share Code
               </button>
+              <a href="#how-it-works" className="hover:text-foreground transition-colors">
+                How to Live Share
+              </a>
+              <a href="#features" className="hover:text-foreground transition-colors">
+                Features
+              </a>
               <a href="https://liveshare.dev" className="hover:text-foreground transition-colors">
-                LiveShare.dev
+                Live Share.dev
               </a>
             </nav>
             <p className="text-xs mt-4">
-              © 2024 LiveShare - Free Online Code Editor and Code Sharing Platform
+              © 2025 Live Share - Free Online Code Editor and Live Code Sharing Platform
             </p>
           </div>
         </div>

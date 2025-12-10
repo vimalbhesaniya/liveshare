@@ -1,4 +1,44 @@
+/* Performance optimized font loading */
 @import url("https://fonts.googleapis.com/css2?family=Audiowide&family=Fira+Code:wght@300..700&family=MedievalSharp&family=Oxanium:wght@500;700&display=swap");
+
+/* Critical CSS for Core Web Vitals */
+@layer base {
+  /* Optimize font rendering for better CLS */
+  * {
+    font-display: swap;
+  }
+
+  /* Prevent layout shift */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Optimize text rendering */
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Optimize images for better LCP */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Performance optimizations */
+  .scroll-animate {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .scroll-animate.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 @tailwind base;
 @tailwind components;

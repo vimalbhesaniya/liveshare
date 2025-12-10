@@ -1,5 +1,6 @@
 # robots.txt for liveshare.dev
 # Updated: 2024-12-20
+# Live Share - Free Online Code Editor and Code Sharing Platform
 
 # Allow all search engines
 User-agent: *
@@ -10,6 +11,9 @@ Sitemap: https://liveshare.dev/sitemap.xml
 
 # Crawl-delay (optional, helps prevent server overload)
 Crawl-delay: 1
+
+# Host directive for canonical domain
+Host: https://liveshare.dev
 
 # Specific rules for major search engines
 User-agent: Googlebot

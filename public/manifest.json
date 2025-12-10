@@ -1,6 +1,6 @@
 {
-  "name": "LiveShare - Share Code in Real-time",
-  "short_name": "LiveShare",
+  "name": "Live Share - Share Code in Real-time",
+  "short_name": "Live Share",
   "description": "Online code editor for interviews, troubleshooting, teaching & collaboration. Share code instantly with developers worldwide.",
   "start_url": "/",
   "display": "standalone",
