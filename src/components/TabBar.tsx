@@ -61,7 +61,11 @@ export function TabBar({
   const [editValue, setEditValue] = useState("");
   const [draggedTab, setDraggedTab] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<string | null>(null);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   const activeTabIndex = tabs.findIndex((t) => t.id === activeTabId);
   const activeTab = tabs[activeTabIndex];
@@ -72,6 +76,56 @@ export function TabBar({
       inputRef.current.select();
     }
   }, [editingTabId]);
+
+  // Check if tabs container needs scroll buttons
+  useEffect(() => {
+    const checkScrollability = () => {
+      if (tabsContainerRef.current) {
+        const { scrollWidth, clientWidth, scrollLeft } =
+          tabsContainerRef.current;
+        const hasOverflow = scrollWidth > clientWidth;
+        setShowScrollButtons(hasOverflow);
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      }
+    };
+
+    checkScrollability();
+    window.addEventListener("resize", checkScrollability);
+
+    // Also check when tabs change
+    const resizeObserver = new ResizeObserver(checkScrollability);
+    if (tabsContainerRef.current) {
+      resizeObserver.observe(tabsContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkScrollability);
+      resizeObserver.disconnect();
+    };
+  }, [tabs]);
+
+  const handleScroll = () => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  const scrollTabs = (direction: "left" | "right") => {
+    if (tabsContainerRef.current) {
+      const scrollAmount = 200; // Scroll by 200px
+      const newScrollLeft =
+        tabsContainerRef.current.scrollLeft +
+        (direction === "left" ? -scrollAmount : scrollAmount);
+
+      tabsContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const handleDoubleClick = (tab: Tab) => {
     setEditingTabId(tab.id);
@@ -267,17 +321,36 @@ export function TabBar({
       </div>
 
       {/* Desktop View - Show all tabs */}
-      <div className="hidden sm:flex items-center gap-1 overflow-x-auto">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, tab.id)}
-            onDragOver={(e) => handleDragOver(e, tab.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, tab.id)}
-            onDragEnd={handleDragEnd}
-            className={`
+      <div className="hidden sm:flex items-center gap-1">
+        {/* Left scroll button */}
+        {showScrollButtons && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 flex-shrink-0 opacity-60 hover:opacity-100"
+            onClick={() => scrollTabs("left")}
+            disabled={!canScrollLeft}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* Tabs container with hidden scrollbar */}
+        <div
+          ref={tabsContainerRef}
+          className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1"
+          onScroll={handleScroll}
+        >
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, tab.id)}
+              onDragOver={(e) => handleDragOver(e, tab.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, tab.id)}
+              onDragEnd={handleDragEnd}
+              className={`
               group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer
               transition-all duration-150 min-w-[100px] max-w-[180px]
               ${
@@ -288,89 +361,105 @@ export function TabBar({
               ${dragOverTab === tab.id ? "ring-2 ring-primary" : ""}
               ${draggedTab === tab.id ? "opacity-50" : ""}
             `}
-            onClick={() => onTabSelect(tab.id)}
-            style={{
-              borderLeft: `4px solid ${tab.color}`,
-              ...(activeTabId === tab.id ? { 
-                boxShadow: `0 0 0 2px ${tab.color}40`,
-                borderColor: tab.color,
-              } : {}),
-            }}
-          >
-            <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
+              onClick={() => onTabSelect(tab.id)}
+              style={{
+                borderLeft: `4px solid ${tab.color}`,
+                ...(activeTabId === tab.id
+                  ? {
+                      boxShadow: `0 0 0 2px ${tab.color}40`,
+                      borderColor: tab.color,
+                    }
+                  : {}),
+              }}
+            >
+              <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
 
-            {editingTabId === tab.id ? (
-              <Input
-                ref={inputRef}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={() => handleEditSubmit(tab.id)}
-                onKeyDown={(e) => handleEditKeyDown(e, tab.id)}
-                className="h-5 px-1 py-0 text-xs w-full min-w-0"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span
-                className={`text-xs truncate flex-1 ${
-                  activeTabId === tab.id 
-                    ? "font-bold text-foreground" 
-                    : "font-medium text-muted-foreground"
-                }`}
-                onDoubleClick={() => handleDoubleClick(tab)}
-              >
-                {tab.name}
-              </span>
-            )}
+              {editingTabId === tab.id ? (
+                <Input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleEditSubmit(tab.id)}
+                  onKeyDown={(e) => handleEditKeyDown(e, tab.id)}
+                  className="h-5 px-1 py-0 text-xs w-full min-w-0"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className={`text-xs truncate flex-1 ${
+                    activeTabId === tab.id
+                      ? "font-bold text-foreground"
+                      : "font-medium text-muted-foreground"
+                  }`}
+                  onDoubleClick={() => handleDoubleClick(tab)}
+                >
+                  {tab.name}
+                </span>
+              )}
 
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
-              <Popover>
-                <PopoverTrigger asChild>
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Palette className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" align="start">
+                    <div className="grid grid-cols-5 gap-1">
+                      {TAB_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                            tab.color === color
+                              ? "border-foreground"
+                              : "border-transparent"
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTabColorChange(tab.id, color);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {tabs.length > 1 && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 p-0"
-                    onClick={(e) => e.stopPropagation()}
+                    className="h-5 w-5 p-0 hover:bg-destructive/20 hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTabClose(tab.id);
+                    }}
                   >
-                    <Palette className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" align="start">
-                  <div className="grid grid-cols-5 gap-1">
-                    {TAB_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                          tab.color === color
-                            ? "border-foreground"
-                            : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTabColorChange(tab.id, color);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {tabs.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 p-0 hover:bg-destructive/20 hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTabClose(tab.id);
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Right scroll button */}
+        {showScrollButtons && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 flex-shrink-0 opacity-60 hover:opacity-100"
+            onClick={() => scrollTabs("right")}
+            disabled={!canScrollRight}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
 
         <Button
           variant="ghost"

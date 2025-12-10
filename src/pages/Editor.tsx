@@ -17,6 +17,7 @@ import {
   Minus,
   AlertTriangle,
   Map as MapIcon,
+  Users,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ import {
   EnterPasswordDialog,
   hashPassword,
 } from "@/components/PasswordDialog";
+import { PageLoader } from "@/components/PageLoader";
 
 // Map our language names to Monaco language IDs
 const languageMap: Record<string, string> = {
@@ -109,6 +111,7 @@ const EditorPage = () => {
   const MIN_FONT_SIZE = 10;
   const MAX_FONT_SIZE = 32;
   const [userSelections, setUserSelections] = useState<UserSelection[]>([]);
+  const [activeUserCount, setActiveUserCount] = useState(0);
   const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -574,17 +577,22 @@ const EditorPage = () => {
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const selections: UserSelection[] = [];
+        const uniqueUsers = new Set<string>();
 
         Object.keys(state).forEach((key) => {
           const presences = state[key] as Array<Record<string, unknown>>;
           presences.forEach((presence) => {
-            if (presence.userId !== myUserId && presence.selection) {
-              selections.push(presence.selection as UserSelection);
+            if (presence.userId) {
+              uniqueUsers.add(presence.userId as string);
+              if (presence.userId !== myUserId && presence.selection) {
+                selections.push(presence.selection as UserSelection);
+              }
             }
           });
         });
 
         setUserSelections(selections);
+        setActiveUserCount(uniqueUsers.size);
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -918,7 +926,10 @@ const EditorPage = () => {
         const endPos = model.getPositionAt(selection.end);
 
         // Create a consistent CSS class based on user ID
-        const userIndex = selection.userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 10;
+        const userIndex =
+          selection.userId
+            .split("")
+            .reduce((acc, char) => acc + char.charCodeAt(0), 0) % 10;
         const userColorClass = `remote-selection-user-${userIndex}`;
 
         decorations.push({
@@ -929,13 +940,14 @@ const EditorPage = () => {
             endPos.column
           ),
           options: {
-            className: 'remote-user-selection',
+            className: "remote-user-selection",
             inlineClassName: userColorClass,
-            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness:
+              monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         });
       } catch (error) {
-        console.warn('Error creating selection decoration:', error);
+        console.warn("Error creating selection decoration:", error);
       }
     });
 
@@ -1010,11 +1022,7 @@ const EditorPage = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Show password entry dialog if protected and not authenticated
@@ -1035,9 +1043,6 @@ const EditorPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
-            <h1 className="text-lg sm:text-2xl font-bold whitespace-nowrap">
-              Editor
-            </h1>
             <Select
               value={activeTab?.language || "javascript"}
               onValueChange={handleLanguageChange}
@@ -1071,6 +1076,15 @@ const EditorPage = () => {
                 <SelectItem value="dockerfile">Dockerfile</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Live Collaborator Count */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-primary text-sm font-medium">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              <Users className="w-4 h-4" />
+              <span>
+                {activeUserCount} developer{activeUserCount !== 1 ? 's' : ''} collaborating live
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 justify-end">

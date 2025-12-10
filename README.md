@@ -5,7 +5,7 @@ Share code instantly with developers worldwide. Perfect for interviews, collabor
 ## ✨ Features
 
 - **Instant Code Sharing** - No sign-up required. Create a session and share in seconds
-- **Custom URLs** - Choose your own unique URL like `liveshare.in/your-code`
+- **Custom URLs** - Choose your own unique URL like `liveshare.dev/your-code`
 - **Password Protection** - Secure your code with optional password protection
 - **Syntax Highlighting** - Beautiful highlighting for 50+ programming languages
 - **Dark/Light Theme** - Toggle between themes for comfortable viewing

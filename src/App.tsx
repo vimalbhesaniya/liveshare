@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Suspense, lazy } from "react";
+import { PageLoader } from "@/components/PageLoader";
 
 // Lazy load heavy components for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -25,7 +26,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="text-lg">Loading Live Share...</div></div>}>
+          <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/:code" element={<Editor />} />
