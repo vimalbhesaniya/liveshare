@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Code2,
   Zap,
-  Lock,
   FileCode,
   Link2,
   Share2,

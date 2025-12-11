@@ -1041,13 +1041,13 @@ const EditorPage = () => {
 
       <div className="container mx-auto px-3 sm:px-6 pt-20 sm:pt-24 pb-4 sm:pb-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
             <Select
               value={activeTab?.language || "javascript"}
               onValueChange={handleLanguageChange}
             >
-              <SelectTrigger className="w-[130px] sm:w-[180px]">
+              <SelectTrigger className="w-[130px] sm:w-[160px] md:w-[200px]">
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
@@ -1081,13 +1081,15 @@ const EditorPage = () => {
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-primary text-sm font-medium">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
               <Users className="w-4 h-4" />
-              <span>
-                {activeUserCount} developer{activeUserCount !== 1 ? 's' : ''} collaborating live
+              <span className="hidden md:inline">
+                {activeUserCount} developer{activeUserCount !== 1 ? "s" : ""}{" "}
+                collaborating live
               </span>
+              <span className="md:hidden">{activeUserCount} live</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
             {/* Font Size Controls - visible on mobile/tablet */}
             <div className="flex items-center gap-1 border border-border rounded-md p-0.5 lg:hidden">
               <Button
@@ -1127,7 +1129,8 @@ const EditorPage = () => {
               className="px-2 sm:px-3"
               title={showMinimap ? "Hide Minimap" : "Show Minimap"}
             >
-              <MapIcon className="h-4 w-4 " />
+              <MapIcon className="h-4 w-4" />
+              <span className="hidden lg:inline ml-2">Minimap</span>
             </Button>
 
             <SetPasswordDialog
@@ -1140,8 +1143,8 @@ const EditorPage = () => {
               onClick={handleCopy}
               className="px-2 sm:px-3"
             >
-              <Copy className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Copy</span>
+              <Copy className="h-4 w-4 sm:mr-1 md:mr-2" />
+              <span className="hidden md:inline">Copy</span>
             </Button>
             <Button
               variant="outline"
@@ -1149,12 +1152,12 @@ const EditorPage = () => {
               onClick={handleDownload}
               className="px-2 sm:px-3"
             >
-              <Download className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Download</span>
+              <Download className="h-4 w-4 sm:mr-1 md:mr-2" />
+              <span className="hidden md:inline">Download</span>
             </Button>
             <Button size="sm" onClick={handleShare} className="px-2 sm:px-3">
-              <Share2 className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Share</span>
+              <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
+              <span className="hidden md:inline">Share</span>
             </Button>
           </div>
         </div>
