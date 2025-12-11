@@ -116,7 +116,7 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-6 pt-32 pb-24 relative">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="scroll-animate animate-in text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight min-h-[1.2em] md:min-h-[2.4em]">
+            <h1 className="scroll-animate animate-in text-3xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight min-h-[4em] md:min-h-[2.4em]">
               {displayText}
               <span className="typing-cursor">|</span>
             </h1>
