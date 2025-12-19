@@ -1042,7 +1042,7 @@ const EditorPage = () => {
       <div className="container mx-auto px-3 sm:px-6 pt-20 sm:pt-24 pb-4 sm:pb-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
+          <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
             <Select
               value={activeTab?.language || "javascript"}
               onValueChange={handleLanguageChange}
@@ -1089,7 +1089,7 @@ const EditorPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
+          <div className="flex flex-wrap  items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
             {/* Font Size Controls - visible on mobile/tablet */}
             <div className="flex items-center gap-1 border border-border rounded-md p-0.5 lg:hidden">
               <Button
