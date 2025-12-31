@@ -117,7 +117,15 @@ const EditorPage = () => {
   const [activeUserCount, setActiveUserCount] = useState(0);
   const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
-  const { showNotification, isSupported, permission, requestPermission } = useBrowserNotifications();
+  const {
+    showNotification,
+    isSupported,
+    permission,
+    isSecureContext,
+    isMobile,
+    isDocumentVisible,
+    requestPermission
+  } = useBrowserNotifications();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const broadcastTimeoutRef = useRef<NodeJS.Timeout>();
   const isRemoteUpdateRef = useRef(false);
@@ -164,17 +172,46 @@ const EditorPage = () => {
   // Request browser notification permission when user enters editor
   useEffect(() => {
     const requestNotificationPermission = async () => {
-      if (isSupported && permission === 'default') {
+      if (isSupported && permission === "default") {
+        // Check if we can request permissions on mobile
+        if (isMobile && !isSecureContext) {
+          toast({
+            title: "Notifications require HTTPS",
+            description: "For security reasons, mobile browsers require HTTPS for notifications. Please use the secure version of the site.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         try {
           const result = await requestPermission();
-          if (result === 'granted') {
+          if (result === "granted") {
+            const mobileMessage = isMobile
+              ? "You'll receive notifications when collaborators join/leave and the app is in the background."
+              : "You'll now receive notifications for collaborator activity.";
+
             toast({
               title: "Notifications enabled",
-              description: "You'll now receive notifications for collaborator activity.",
+              description: mobileMessage,
+            });
+          } else if (result === "denied") {
+            const mobileHint = isMobile
+              ? " On mobile, check your browser settings and ensure you're using HTTPS."
+              : "";
+
+            toast({
+              title: "Notifications blocked",
+              description: `Notification permission was denied.${mobileHint} You can enable them in your browser settings.`,
+              variant: "destructive",
             });
           }
         } catch (error) {
-          console.warn('Failed to request notification permission:', error);
+          console.warn("Failed to request notification permission:", error);
+          toast({
+            title: "Notification setup failed",
+            description: "There was an issue setting up notifications. Please try again.",
+            variant: "destructive",
+          });
         }
       }
     };
@@ -183,7 +220,7 @@ const EditorPage = () => {
     const timeoutId = setTimeout(requestNotificationPermission, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [isSupported, permission, requestPermission, toast]);
+  }, [isSupported, permission, isSecureContext, isMobile, requestPermission, toast, isDocumentVisible]);
 
   // Keyboard shortcuts for font size
   useEffect(() => {
@@ -918,8 +955,11 @@ const EditorPage = () => {
     if (currentOthers > previousOthers) {
       // Someone joined
       const newUsers = currentOthers - previousOthers;
-      const title = newUsers === 1 ? "Collaborator joined!" : "Collaborators joined!";
-      const description = `${newUsers} developer${newUsers > 1 ? 's' : ''} started collaborating`;
+      const title =
+        newUsers === 1 ? "Collaborator joined!" : "Collaborators joined!";
+      const description = `${newUsers} developer${
+        newUsers > 1 ? "s" : ""
+      } started collaborating`;
 
       // Show in-app toast notification
       toast({
@@ -928,19 +968,28 @@ const EditorPage = () => {
       });
 
       // Show browser notification if supported and permitted
-      if (isSupported && permission === 'granted') {
+      if (isSupported && permission === "granted") {
+        console.log('Showing collaborator joined notification:', {
+          title,
+          isMobile,
+          isDocumentVisible,
+          permission
+        });
         showNotification({
           title,
           body: description,
-          tag: 'collaborator-joined',
+          tag: "collaborator-joined",
           requireInteraction: false,
         });
       }
     } else if (currentOthers < previousOthers) {
       // Someone left
       const leftUsers = previousOthers - currentOthers;
-      const title = leftUsers === 1 ? "Collaborator left" : "Collaborators left";
-      const description = `${leftUsers} developer${leftUsers > 1 ? 's' : ''} stopped collaborating`;
+      const title =
+        leftUsers === 1 ? "Collaborator left" : "Collaborators left";
+      const description = `${leftUsers} developer${
+        leftUsers > 1 ? "s" : ""
+      } stopped collaborating`;
 
       // Show in-app toast notification
       toast({
@@ -949,16 +998,22 @@ const EditorPage = () => {
       });
 
       // Show browser notification if supported and permitted
-      if (isSupported && permission === 'granted') {
+      if (isSupported && permission === "granted") {
+        console.log('Showing collaborator left notification:', {
+          title,
+          isMobile,
+          isDocumentVisible,
+          permission
+        });
         showNotification({
           title,
           body: description,
-          tag: 'collaborator-left',
+          tag: "collaborator-left",
           requireInteraction: false,
         });
       }
     }
-  }, [activeUserCount, toast, isSupported, permission, showNotification]);
+  }, [activeUserCount, toast, isSupported, permission, showNotification, isMobile, isDocumentVisible]);
 
   // Handle Monaco editor mount
   const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
@@ -1254,30 +1309,27 @@ const EditorPage = () => {
             {/* Browser Notifications Toggle */}
             {isSupported && (
               <Button
-                variant={permission === 'granted' ? "default" : "outline"}
+                variant={permission === "granted" ? "default" : "outline"}
                 size="sm"
                 onClick={async () => {
-                  if (permission !== 'granted') {
+                  if (permission !== "granted") {
                     await requestPermission();
                   }
                 }}
                 className="px-2 sm:px-3"
                 title={
-                  permission === 'granted'
+                  permission === "granted"
                     ? "Browser notifications enabled"
-                    : permission === 'denied'
+                    : permission === "denied"
                     ? "Browser notifications blocked - check browser settings"
                     : "Enable browser notifications for collaborator activity"
                 }
               >
-                {permission === 'granted' ? (
+                {permission === "granted" ? (
                   <Bell className="h-4 w-4" />
                 ) : (
                   <BellOff className="h-4 w-4" />
                 )}
-                <span className="hidden lg:inline ml-2">
-                  {permission === 'granted' ? 'Notifications' : 'Enable Notifications'}
-                </span>
               </Button>
             )}
 
