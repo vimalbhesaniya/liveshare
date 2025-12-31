@@ -18,8 +18,11 @@ import {
   AlertTriangle,
   Map as MapIcon,
   Users,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useBrowserNotifications } from "@/hooks/use-browser-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "next-themes";
 import Editor, { loader } from "@monaco-editor/react";
@@ -114,6 +117,7 @@ const EditorPage = () => {
   const [activeUserCount, setActiveUserCount] = useState(0);
   const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
+  const { showNotification, isSupported, permission, requestPermission } = useBrowserNotifications();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const broadcastTimeoutRef = useRef<NodeJS.Timeout>();
   const isRemoteUpdateRef = useRef(false);
@@ -864,6 +868,74 @@ const EditorPage = () => {
     () => `hsl(${Math.random() * 360}, 70%, 60%)`
   );
 
+  // Track previous user count for notifications
+  const prevUserCountRef = useRef<number>(0);
+
+  // Show notifications when collaborators join/leave
+  useEffect(() => {
+    // Skip notification on initial load
+    if (prevUserCountRef.current === 0 && activeUserCount === 1) {
+      prevUserCountRef.current = activeUserCount;
+      return;
+    }
+
+    // Skip if user count hasn't actually changed
+    if (prevUserCountRef.current === activeUserCount) {
+      return;
+    }
+
+    const previousCount = prevUserCountRef.current;
+    prevUserCountRef.current = activeUserCount;
+
+    // Calculate the change (excluding current user)
+    const previousOthers = Math.max(0, previousCount - 1);
+    const currentOthers = Math.max(0, activeUserCount - 1);
+
+    if (currentOthers > previousOthers) {
+      // Someone joined
+      const newUsers = currentOthers - previousOthers;
+      const title = newUsers === 1 ? "Collaborator joined!" : "Collaborators joined!";
+      const description = `${newUsers} developer${newUsers > 1 ? 's' : ''} started collaborating`;
+
+      // Show in-app toast notification
+      toast({
+        title,
+        description,
+      });
+
+      // Show browser notification if supported and permitted
+      if (isSupported && permission === 'granted') {
+        showNotification({
+          title,
+          body: description,
+          tag: 'collaborator-joined',
+          requireInteraction: false,
+        });
+      }
+    } else if (currentOthers < previousOthers) {
+      // Someone left
+      const leftUsers = previousOthers - currentOthers;
+      const title = leftUsers === 1 ? "Collaborator left" : "Collaborators left";
+      const description = `${leftUsers} developer${leftUsers > 1 ? 's' : ''} stopped collaborating`;
+
+      // Show in-app toast notification
+      toast({
+        title,
+        description,
+      });
+
+      // Show browser notification if supported and permitted
+      if (isSupported && permission === 'granted') {
+        showNotification({
+          title,
+          body: description,
+          tag: 'collaborator-left',
+          requireInteraction: false,
+        });
+      }
+    }
+  }, [activeUserCount, toast, isSupported, permission, showNotification]);
+
   // Handle Monaco editor mount
   const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -1155,6 +1227,36 @@ const EditorPage = () => {
               <Download className="h-4 w-4 sm:mr-1 md:mr-2" />
               <span className="hidden md:inline">Download</span>
             </Button>
+            {/* Browser Notifications Toggle */}
+            {isSupported && (
+              <Button
+                variant={permission === 'granted' ? "default" : "outline"}
+                size="sm"
+                onClick={async () => {
+                  if (permission !== 'granted') {
+                    await requestPermission();
+                  }
+                }}
+                className="px-2 sm:px-3"
+                title={
+                  permission === 'granted'
+                    ? "Browser notifications enabled"
+                    : permission === 'denied'
+                    ? "Browser notifications blocked - check browser settings"
+                    : "Enable browser notifications for collaborator activity"
+                }
+              >
+                {permission === 'granted' ? (
+                  <Bell className="h-4 w-4" />
+                ) : (
+                  <BellOff className="h-4 w-4" />
+                )}
+                <span className="hidden lg:inline ml-2">
+                  {permission === 'granted' ? 'Notifications' : 'Enable Notifications'}
+                </span>
+              </Button>
+            )}
+
             <Button size="sm" onClick={handleShare} className="px-2 sm:px-3">
               <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
               <span className="hidden md:inline">Share</span>
