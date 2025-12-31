@@ -161,6 +161,30 @@ const EditorPage = () => {
     });
   }, []);
 
+  // Request browser notification permission when user enters editor
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if (isSupported && permission === 'default') {
+        try {
+          const result = await requestPermission();
+          if (result === 'granted') {
+            toast({
+              title: "Notifications enabled",
+              description: "You'll now receive notifications for collaborator activity.",
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to request notification permission:', error);
+        }
+      }
+    };
+
+    // Request permission after a short delay to ensure the page has loaded
+    const timeoutId = setTimeout(requestNotificationPermission, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isSupported, permission, requestPermission, toast]);
+
   // Keyboard shortcuts for font size
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
