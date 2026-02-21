@@ -20,49 +20,9 @@ import { useState, useEffect } from "react";
 
 // Cursor spotlight position hook
 
-const typingTexts = [
-  "Live Share Code with Developers Worldwide",
-  "Real-time Code Collaboration Made Easy",
-  "Share Code Instantly, No Sign-up Required",
-  "Live Code Sharing for Interviews & Teaching",
-  "The Best Way to Live Share Code Online",
-];
-
 const Index = () => {
   const navigateToRandomEditor = useNavigateToRandomEditor();
-  const [textIndex, setTextIndex] = useState(0);
-  const [displayText, setDisplayText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const currentText = typingTexts[textIndex];
-    const typingSpeed = isDeleting ? 30 : 80;
-    const pauseTime = 2000;
-
-    if (!isDeleting && displayText === currentText) {
-      // Pause before deleting
-      const timeout = setTimeout(() => setIsDeleting(true), pauseTime);
-      return () => clearTimeout(timeout);
-    }
-
-    if (isDeleting && displayText === "") {
-      // Move to next text
-      setIsDeleting(false);
-      setTextIndex((prev) => (prev + 1) % typingTexts.length);
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      if (isDeleting) {
-        setDisplayText(currentText.substring(0, displayText.length - 1));
-      } else {
-        setDisplayText(currentText.substring(0, displayText.length + 1));
-      }
-    }, typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, textIndex]);
 
   // Cursor tracking
   useEffect(() => {
@@ -115,15 +75,13 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-6 pt-32 pb-24 relative">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="scroll-animate animate-in text-3xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight min-h-[4em] md:min-h-[2.4em]">
-              {displayText}
-              <span className="typing-cursor">|</span>
+            <h1 className="scroll-animate animate-in text-3xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight">
+              Share Code in Real-time with Developers
             </h1>
-            <p className="scroll-animate animate-in delay-1 text-sm md:text-xl text-muted-foreground mb-10 leading-relaxed">
-              Live share code snippets instantly with developers worldwide.
-              Perfect for real-time collaboration, coding interviews, debugging
-              & teaching together.
-            </p>
+            <h2 className="scroll-animate animate-in delay-1 text-lg md:text-2xl font-normal text-muted-foreground mb-10 leading-relaxed">
+              An online code editor for interviews, troubleshooting, teaching
+              &amp; more…
+            </h2>
             <div className="scroll-animate animate-in delay-2 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 onClick={navigateToRandomEditor}
@@ -236,26 +194,26 @@ const Index = () => {
 
       {/* Features Grid */}
       <section id="features" className="py-24 container mx-auto px-6">
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="scroll-animate delay-0">
             <FeatureCard
               icon={<Users className="h-10 w-10" />}
-              title="Live share with anyone"
-              description="Paste your code, get a unique link, and live share it instantly with developers, teammates, or the community."
+              title="Code with your team"
+              description="Open a LiveShare editor, write or copy code, then share it with friends and colleagues. Pair program and troubleshoot together."
             />
           </div>
           <div className="scroll-animate delay-1">
             <FeatureCard
               icon={<Video className="h-10 w-10" />}
-              title="Live collaborate easily"
-              description="Live share code snippets during meetings, discussions, or troubleshooting sessions. Real-time collaboration, no setup needed."
+              title="Interview developers"
+              description="Set coding tasks and observe in real-time when interviewing remotely or in person. Nobody likes writing code on a whiteboard."
             />
           </div>
           <div className="scroll-animate delay-2">
             <FeatureCard
               icon={<GraduationCap className="h-10 w-10" />}
-              title="Learn together"
-              description="Share examples with students and peers. A simple way to exchange code for learning and teaching."
+              title="Teach people to program"
+              description="Share your code with students and peers then educate them. Universities and colleges around the world use LiveShare every day."
             />
           </div>
         </div>
