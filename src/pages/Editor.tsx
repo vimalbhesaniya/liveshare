@@ -124,7 +124,7 @@ const EditorPage = () => {
     isSecureContext,
     isMobile,
     isDocumentVisible,
-    requestPermission
+    requestPermission,
   } = useBrowserNotifications();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const broadcastTimeoutRef = useRef<NodeJS.Timeout>();
@@ -169,6 +169,20 @@ const EditorPage = () => {
     });
   }, []);
 
+  // Show font size tip toast when user first visits the editor (once per session)
+  useEffect(() => {
+    const tipKey = "liveshare-font-tip-shown";
+    if (sessionStorage.getItem(tipKey)) return;
+    const timeoutId = setTimeout(() => {
+      sessionStorage.setItem(tipKey, "1");
+      toast({
+        title: "Tip",
+        description: "Use Ctrl + ↑/↓ to adjust font size",
+      });
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [toast]);
+
   // Request browser notification permission when user enters editor
   useEffect(() => {
     const requestNotificationPermission = async () => {
@@ -177,7 +191,8 @@ const EditorPage = () => {
         if (isMobile && !isSecureContext) {
           toast({
             title: "Notifications require HTTPS",
-            description: "For security reasons, mobile browsers require HTTPS for notifications. Please use the secure version of the site.",
+            description:
+              "For security reasons, mobile browsers require HTTPS for notifications. Please use the secure version of the site.",
             variant: "destructive",
           });
           return;
@@ -209,7 +224,8 @@ const EditorPage = () => {
           console.warn("Failed to request notification permission:", error);
           toast({
             title: "Notification setup failed",
-            description: "There was an issue setting up notifications. Please try again.",
+            description:
+              "There was an issue setting up notifications. Please try again.",
             variant: "destructive",
           });
         }
@@ -220,7 +236,15 @@ const EditorPage = () => {
     const timeoutId = setTimeout(requestNotificationPermission, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [isSupported, permission, isSecureContext, isMobile, requestPermission, toast, isDocumentVisible]);
+  }, [
+    isSupported,
+    permission,
+    isSecureContext,
+    isMobile,
+    requestPermission,
+    toast,
+    isDocumentVisible,
+  ]);
 
   // Keyboard shortcuts for font size
   useEffect(() => {
@@ -284,7 +308,7 @@ const EditorPage = () => {
       const maxLen = Math.max(
         baseLines.length,
         remoteLines.length,
-        localLines.length
+        localLines.length,
       );
 
       for (let i = 0; i < maxLen; i++) {
@@ -317,7 +341,7 @@ const EditorPage = () => {
 
       return mergedLines.join("\n");
     },
-    []
+    [],
   );
 
   // Generate random unique code
@@ -340,7 +364,7 @@ const EditorPage = () => {
         });
       }
     },
-    [myUserId]
+    [myUserId],
   );
 
   // Broadcast code changes to other users for real-time collaboration
@@ -358,7 +382,7 @@ const EditorPage = () => {
         });
       }
     },
-    [myUserId]
+    [myUserId],
   );
 
   // Load or create code snippet
@@ -510,7 +534,7 @@ const EditorPage = () => {
                 // Create a map of remote tabs for easy lookup
                 const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
                 const currentTabMap = new Map(
-                  currentTabs.map((t) => [t.id, t])
+                  currentTabs.map((t) => [t.id, t]),
                 );
 
                 // Merge: for each tab, merge code if both versions exist
@@ -523,7 +547,7 @@ const EditorPage = () => {
                     try {
                       const lastSynced = JSON.parse(lastSyncedCodeRef.current);
                       const baseTab = lastSynced.tabs?.find(
-                        (t: Tab) => t.id === remoteTab.id
+                        (t: Tab) => t.id === remoteTab.id,
                       );
                       baseCode = baseTab?.code || "";
                     } catch {
@@ -534,7 +558,7 @@ const EditorPage = () => {
                     const mergedCode = mergeChanges(
                       baseCode,
                       remoteTab.code,
-                      currentTab.code
+                      currentTab.code,
                     );
 
                     return {
@@ -562,7 +586,7 @@ const EditorPage = () => {
           }
 
           lastSyncedCodeRef.current = remoteCode;
-        }
+        },
       )
       .on("broadcast", { event: "tabs_update" }, (payload) => {
         const { tabs: remoteTabs, senderId } = payload.payload;
@@ -574,7 +598,7 @@ const EditorPage = () => {
         // Merge tabs instead of overwriting to preserve local edits
         setTabs((currentTabs) => {
           const remoteTabMap = new Map(
-            (remoteTabs as Tab[]).map((t) => [t.id, t])
+            (remoteTabs as Tab[]).map((t) => [t.id, t]),
           );
           const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
 
@@ -588,7 +612,7 @@ const EditorPage = () => {
               try {
                 const lastSynced = JSON.parse(lastSyncedCodeRef.current);
                 const baseTab = lastSynced.tabs?.find(
-                  (t: Tab) => t.id === remoteTab.id
+                  (t: Tab) => t.id === remoteTab.id,
                 );
                 baseCode = baseTab?.code || "";
               } catch {
@@ -599,7 +623,7 @@ const EditorPage = () => {
               const mergedCode = mergeChanges(
                 baseCode,
                 remoteTab.code,
-                currentTab.code
+                currentTab.code,
               );
 
               return {
@@ -777,7 +801,7 @@ const EditorPage = () => {
       isRemoteUpdateRef.current = false;
       // Still update state for remote changes
       const newTabs = tabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, code: newCode } : tab
+        tab.id === activeTabId ? { ...tab, code: newCode } : tab,
       );
       setTabs(newTabs);
       return;
@@ -800,7 +824,7 @@ const EditorPage = () => {
           const newTabs = tabs.map((tab) =>
             tab.id === activeTabId
               ? { ...tab, code: pendingCodeRef.current! }
-              : tab
+              : tab,
           );
           setTabs(newTabs);
 
@@ -822,7 +846,7 @@ const EditorPage = () => {
       }
       broadcastTimeoutRef.current = setTimeout(() => {
         const newTabs = tabs.map((tab) =>
-          tab.id === activeTabId ? { ...tab, code: newCode } : tab
+          tab.id === activeTabId ? { ...tab, code: newCode } : tab,
         );
         broadcastTabsUpdate(newTabs, activeTabId);
       }, 1000);
@@ -832,7 +856,7 @@ const EditorPage = () => {
 
     // Normal flow for smaller files
     const newTabs = tabs.map((tab) =>
-      tab.id === activeTabId ? { ...tab, code: newCode } : tab
+      tab.id === activeTabId ? { ...tab, code: newCode } : tab,
     );
     setTabs(newTabs);
 
@@ -862,7 +886,7 @@ const EditorPage = () => {
 
   const handleLanguageChange = (newLanguage: string) => {
     const newTabs = tabs.map((tab) =>
-      tab.id === activeTabId ? { ...tab, language: newLanguage } : tab
+      tab.id === activeTabId ? { ...tab, language: newLanguage } : tab,
     );
     setTabs(newTabs);
     broadcastTabsUpdate(newTabs, activeTabId);
@@ -902,7 +926,7 @@ const EditorPage = () => {
 
   const handleTabRename = (tabId: string, newName: string) => {
     const newTabs = tabs.map((tab) =>
-      tab.id === tabId ? { ...tab, name: newName } : tab
+      tab.id === tabId ? { ...tab, name: newName } : tab,
     );
     setTabs(newTabs);
     broadcastTabsUpdate(newTabs, activeTabId);
@@ -911,7 +935,7 @@ const EditorPage = () => {
 
   const handleTabColorChange = (tabId: string, newColor: string) => {
     const newTabs = tabs.map((tab) =>
-      tab.id === tabId ? { ...tab, color: newColor } : tab
+      tab.id === tabId ? { ...tab, color: newColor } : tab,
     );
     setTabs(newTabs);
     broadcastTabsUpdate(newTabs, activeTabId);
@@ -926,7 +950,7 @@ const EditorPage = () => {
 
   // Store a consistent color for this user's selection
   const [mySelectionColor] = useState(
-    () => `hsl(${Math.random() * 360}, 70%, 60%)`
+    () => `hsl(${Math.random() * 360}, 70%, 60%)`,
   );
 
   // Track previous user count for notifications
@@ -969,11 +993,11 @@ const EditorPage = () => {
 
       // Show browser notification if supported and permitted
       if (isSupported && permission === "granted") {
-        console.log('Showing collaborator joined notification:', {
+        console.log("Showing collaborator joined notification:", {
           title,
           isMobile,
           isDocumentVisible,
-          permission
+          permission,
         });
         showNotification({
           title,
@@ -999,11 +1023,11 @@ const EditorPage = () => {
 
       // Show browser notification if supported and permitted
       if (isSupported && permission === "granted") {
-        console.log('Showing collaborator left notification:', {
+        console.log("Showing collaborator left notification:", {
           title,
           isMobile,
           isDocumentVisible,
-          permission
+          permission,
         });
         showNotification({
           title,
@@ -1013,7 +1037,15 @@ const EditorPage = () => {
         });
       }
     }
-  }, [activeUserCount, toast, isSupported, permission, showNotification, isMobile, isDocumentVisible]);
+  }, [
+    activeUserCount,
+    toast,
+    isSupported,
+    permission,
+    showNotification,
+    isMobile,
+    isDocumentVisible,
+  ]);
 
   // Handle Monaco editor mount
   const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
@@ -1088,7 +1120,7 @@ const EditorPage = () => {
             startPos.lineNumber,
             startPos.column,
             endPos.lineNumber,
-            endPos.column
+            endPos.column,
           ),
           options: {
             className: "remote-user-selection",
@@ -1190,7 +1222,7 @@ const EditorPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <div className="container mx-auto px-3 sm:px-6 pt-20 sm:pt-24 pb-4 sm:pb-8">
+      <div className="container-fluid mx-auto px-2 sm:px-2 pt-20 sm:pt-24 pb-4 sm:pb-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
@@ -1321,8 +1353,8 @@ const EditorPage = () => {
                   permission === "granted"
                     ? "Browser notifications enabled"
                     : permission === "denied"
-                    ? "Browser notifications blocked - check browser settings"
-                    : "Enable browser notifications for collaborator activity"
+                      ? "Browser notifications blocked - check browser settings"
+                      : "Enable browser notifications for collaborator activity"
                 }
               >
                 {permission === "granted" ? (
@@ -1356,7 +1388,7 @@ const EditorPage = () => {
         <div
           className="rounded-b-lg border border-t-0 border-border shadow-2xl overflow-hidden"
           style={{
-            height: isLargeFile ? "calc(100vh - 340px)" : "calc(100vh - 300px)",
+            height: "calc(100vh - 235px)",
           }}
         >
           <Editor
@@ -1422,14 +1454,6 @@ const EditorPage = () => {
               </div>
             }
           />
-        </div>
-
-        {/* Footer text */}
-        <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-muted-foreground space-y-1">
-          <p>Anyone with this link can view and edit in real-time</p>
-          <p className="hidden lg:block text-xs opacity-70">
-            Tip: Use Ctrl + ↑/↓ to adjust font size
-          </p>
         </div>
       </div>
     </div>
