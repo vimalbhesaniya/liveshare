@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Suspense, lazy } from "react";
 import { PageLoader } from "@/components/PageLoader";
+import { FeedbackModal } from "@/components/FeedbackModal";
+import { useExitIntent } from "@/hooks/useExitIntent";
 
 // Lazy load heavy components for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -13,6 +15,18 @@ const Editor = lazy(() => import("./pages/Editor"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+function ExitIntentFeedback() {
+  const [showFeedback, markAsShown] = useExitIntent();
+  return (
+    <FeedbackModal
+      open={showFeedback}
+      onOpenChange={(open) => {
+        if (!open) markAsShown();
+      }}
+    />
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,6 +39,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <ExitIntentFeedback />
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
             <Routes>
