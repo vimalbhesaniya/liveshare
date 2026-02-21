@@ -62,7 +62,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
         templateId,
         {
           from_name: name.trim() || "Anonymous",
-          from_email: email.trim() || "not-provided@feedback.local",
+          reply_to: email.trim() || "not-provided@feedback.local",
           message: trimmedMessage,
         },
         publicKey
