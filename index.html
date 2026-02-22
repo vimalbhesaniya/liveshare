@@ -98,7 +98,6 @@
     <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
-    <meta name="theme-color" content="#ffffff" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -166,8 +165,10 @@
 
     <link rel="canonical" href="https://liveshare.dev" />
 
-    <!-- Core Web Vitals Optimizations -->
+    <!-- Core Web Vitals Optimizations - Browser header/status bar color for mobile (matches app theme) -->
     <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -194,7 +195,6 @@
     <meta name="msapplication-navbutton-color" content="#ffffff" />
 
     <!-- Additional SEO Meta Tags for Live Share Targeting -->
-    <meta name="theme-color" content="#3b82f6" />
     <meta name="apple-mobile-web-app-title" content="Live Share" />
     <meta name="application-name" content="Live Share" />
 
