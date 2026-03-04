@@ -1338,32 +1338,6 @@ const EditorPage = () => {
               <Download className="h-4 w-4 sm:mr-1 md:mr-2" />
               <span className="hidden md:inline">Download</span>
             </Button>
-            {/* Browser Notifications Toggle */}
-            {isSupported && (
-              <Button
-                variant={permission === "granted" ? "default" : "outline"}
-                size="sm"
-                onClick={async () => {
-                  if (permission !== "granted") {
-                    await requestPermission();
-                  }
-                }}
-                className="px-2 sm:px-3"
-                title={
-                  permission === "granted"
-                    ? "Browser notifications enabled"
-                    : permission === "denied"
-                      ? "Browser notifications blocked - check browser settings"
-                      : "Enable browser notifications for collaborator activity"
-                }
-              >
-                {permission === "granted" ? (
-                  <Bell className="h-4 w-4" />
-                ) : (
-                  <BellOff className="h-4 w-4" />
-                )}
-              </Button>
-            )}
 
             <Button size="sm" onClick={handleShare} className="px-2 sm:px-3">
               <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
