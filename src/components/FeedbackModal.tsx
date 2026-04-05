@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 type FeedbackModalProps = {
   open: boolean;
@@ -21,10 +22,10 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorText, setErrorText] = useState("");
+  const { t } = useTranslation();
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
-    // Reset after animation
     setTimeout(() => {
       setName("");
       setEmail("");
@@ -39,7 +40,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
 
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
-      setErrorText("Feedback message is required");
+      setErrorText(t("feedback.feedbackRequired"));
       return;
     }
 
@@ -52,7 +53,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
 
     if (!serviceId || !templateId || !publicKey) {
       setStatus("error");
-      setErrorText("Email service not configured. Please add EmailJS env variables.");
+      setErrorText(t("feedback.emailNotConfigured"));
       return;
     }
 
@@ -71,7 +72,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
     } catch (err) {
       console.error("Feedback send error:", err);
       setStatus("error");
-      setErrorText(err instanceof Error ? err.message : "Failed to send feedback. Please try again.");
+      setErrorText(err instanceof Error ? err.message : t("feedback.sendError"));
     }
   };
 
@@ -88,23 +89,23 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
-            We'd love your feedback
+            {t("feedback.title")}
           </DialogTitle>
         </DialogHeader>
 
         {status === "success" ? (
           <div className="py-6 text-center space-y-4">
-            <p className="text-muted-foreground">Thank you! Your feedback has been sent.</p>
-            <Button onClick={handleClose}>Close</Button>
+            <p className="text-muted-foreground">{t("feedback.thankYou")}</p>
+            <Button onClick={handleClose}>{t("feedback.close")}</Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="feedback-name">Name (optional)</Label>
+              <Label htmlFor="feedback-name">{t("feedback.nameLabel")}</Label>
               <Input
                 id="feedback-name"
                 type="text"
-                placeholder="Your name"
+                placeholder={t("feedback.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={status === "submitting"}
@@ -113,11 +114,11 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="feedback-email">Email (optional)</Label>
+              <Label htmlFor="feedback-email">{t("feedback.emailLabel")}</Label>
               <Input
                 id="feedback-email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder={t("feedback.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={status === "submitting"}
@@ -127,12 +128,12 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
 
             <div className="space-y-2">
               <Label htmlFor="feedback-message">
-                Feedback <span className="text-destructive">*</span>
+                {t("feedback.feedbackLabel")} <span className="text-destructive">*</span>
               </Label>
               <textarea
                 id="feedback-message"
                 required
-                placeholder="Your feedback..."
+                placeholder={t("feedback.feedbackPlaceholder")}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={status === "submitting"}
@@ -152,10 +153,10 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
                 onClick={handleClose}
                 disabled={status === "submitting"}
               >
-                Close
+                {t("feedback.close")}
               </Button>
               <Button type="submit" disabled={status === "submitting"}>
-                {status === "submitting" ? "Sending..." : "Submit"}
+                {status === "submitting" ? t("feedback.sending") : t("feedback.submit")}
               </Button>
             </div>
           </form>

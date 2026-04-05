@@ -1,3 +1,4 @@
+import "./i18n"; // Initialize i18n before anything else
 import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { injectSpeedInsights } from "@vercel/speed-insights";

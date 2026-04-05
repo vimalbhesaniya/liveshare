@@ -2,10 +2,13 @@ import { Link } from "react-router-dom";
 import { Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { useNavigateToRandomEditor } from "@/hooks/use-random-editor";
+import { useTranslation } from "react-i18next";
 
 export const Navigation = () => {
   const navigateToRandomEditor = useNavigateToRandomEditor();
+  const { t } = useTranslation();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg">
@@ -24,8 +27,9 @@ export const Navigation = () => {
               onClick={navigateToRandomEditor}
               className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Editor
+              {t("nav.editor")}
             </button>
+            <LanguageSelector />
             <ThemeToggle />
             <Button
               onClick={navigateToRandomEditor}
@@ -33,7 +37,7 @@ export const Navigation = () => {
               size="sm"
               className="text-xs sm:text-sm px-2 sm:px-3"
             >
-              New Session
+              {t("nav.newSession")}
             </Button>
           </div>
         </div>

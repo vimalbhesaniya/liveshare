@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ type UserSelection = {
 };
 
 const EditorPage = () => {
+  const { t } = useTranslation();
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
   const [tabs, setTabs] = useState<Tab[]>([
@@ -176,8 +178,8 @@ const EditorPage = () => {
     const timeoutId = setTimeout(() => {
       sessionStorage.setItem(tipKey, "1");
       toast({
-        title: "Tip",
-        description: "Use Ctrl + ↑/↓ to adjust font size",
+        title: t("editor.tipTitle"),
+        description: t("editor.tipDesc"),
       });
     }, 2000);
     return () => clearTimeout(timeoutId);
@@ -190,9 +192,9 @@ const EditorPage = () => {
         // Check if we can request permissions on mobile
         if (isMobile && !isSecureContext) {
           toast({
-            title: "Notifications require HTTPS",
+            title: t("editor.notifRequireHttps"),
             description:
-              "For security reasons, mobile browsers require HTTPS for notifications. Please use the secure version of the site.",
+              t("editor.notifRequireHttpsDesc"),
             variant: "destructive",
           });
           return;
@@ -202,30 +204,30 @@ const EditorPage = () => {
           const result = await requestPermission();
           if (result === "granted") {
             const mobileMessage = isMobile
-              ? "You'll receive notifications when collaborators join/leave and the app is in the background."
-              : "You'll now receive notifications for collaborator activity.";
+              ? t("editor.notifEnabledDescMobile")
+              : t("editor.notifEnabledDescDesktop");
 
             toast({
-              title: "Notifications enabled",
+              title: t("editor.notifEnabledTitle"),
               description: mobileMessage,
             });
           } else if (result === "denied") {
             const mobileHint = isMobile
-              ? " On mobile, check your browser settings and ensure you're using HTTPS."
+              ? t("editor.notifBlockedMobileHint")
               : "";
 
             toast({
-              title: "Notifications blocked",
-              description: `Notification permission was denied.${mobileHint} You can enable them in your browser settings.`,
+              title: t("editor.notifBlockedTitle"),
+              description: `${t("editor.notifBlockedDesc")}${mobileHint}${t("editor.notifBlockedSuffix")}`,
               variant: "destructive",
             });
           }
         } catch (error) {
           console.warn("Failed to request notification permission:", error);
           toast({
-            title: "Notification setup failed",
+            title: t("editor.notifSetupFailed"),
             description:
-              "There was an issue setting up notifications. Please try again.",
+              t("editor.notifSetupFailedDesc"),
             variant: "destructive",
           });
         }
@@ -404,8 +406,8 @@ const EditorPage = () => {
       if (error) {
         console.error("Error loading snippet:", error);
         toast({
-          title: "Error",
-          description: "Failed to load code snippet",
+          title: t("editor.errorTitle"),
+          description: t("editor.errorLoadSnippet"),
           variant: "destructive",
         });
         setIsLoading(false);
@@ -461,7 +463,7 @@ const EditorPage = () => {
           id: "initial",
           name: "Tab 1",
           color: "#3b82f6",
-          code: "// Welcome to LiveShare!\n// Start typing here...\n",
+          code: t("editor.welcomeComment"),
           language: "text",
         };
 
@@ -482,8 +484,8 @@ const EditorPage = () => {
         if (insertError) {
           console.error("Error creating snippet:", insertError);
           toast({
-            title: "Error",
-            description: "Failed to create code snippet",
+            title: t("editor.errorTitle"),
+            description: t("editor.errorCreateSnippet"),
             variant: "destructive",
           });
         } else if (newSnippet) {
@@ -754,9 +756,9 @@ const EditorPage = () => {
         .eq("unique_code", urlCode)
         .then(() => {
           toast({
-            title: "Code Protected!",
+            title: t("editor.codeProtectedTitle"),
             description:
-              "Share the password with people you want to give access.",
+              t("editor.codeProtectedDesc"),
           });
         });
     } else {
@@ -774,8 +776,8 @@ const EditorPage = () => {
         .eq("unique_code", urlCode)
         .then(() => {
           toast({
-            title: "Protection Removed",
-            description: "Anyone with the link can now access this code.",
+            title: t("editor.protectionRemovedTitle"),
+            description: t("editor.protectionRemovedDesc"),
           });
         });
     }
@@ -980,10 +982,8 @@ const EditorPage = () => {
       // Someone joined
       const newUsers = currentOthers - previousOthers;
       const title =
-        newUsers === 1 ? "Collaborator joined!" : "Collaborators joined!";
-      const description = `${newUsers} developer${
-        newUsers > 1 ? "s" : ""
-      } started collaborating`;
+        newUsers === 1 ? t("editor.collabJoined") : t("editor.collabsJoined");
+      const description = `${newUsers} ${newUsers > 1 ? t("editor.developers") : t("editor.developer")} ${t("editor.startedCollab")}`;
 
       // Show in-app toast notification
       toast({
@@ -1010,10 +1010,8 @@ const EditorPage = () => {
       // Someone left
       const leftUsers = previousOthers - currentOthers;
       const title =
-        leftUsers === 1 ? "Collaborator left" : "Collaborators left";
-      const description = `${leftUsers} developer${
-        leftUsers > 1 ? "s" : ""
-      } stopped collaborating`;
+        leftUsers === 1 ? t("editor.collabLeft") : t("editor.collabsLeft");
+      const description = `${leftUsers} ${leftUsers > 1 ? t("editor.developers") : t("editor.developer")} ${t("editor.stoppedCollab")}`;
 
       // Show in-app toast notification
       toast({
@@ -1149,16 +1147,16 @@ const EditorPage = () => {
     const shareUrl = window.location.href;
     navigator.clipboard.writeText(shareUrl);
     toast({
-      title: "Link copied!",
-      description: "Share this link with others to collaborate",
+      title: t("editor.linkCopiedTitle"),
+      description: t("editor.linkCopiedDesc"),
     });
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(activeTab?.code || "");
     toast({
-      title: "Code copied!",
-      description: "Code has been copied to clipboard",
+      title: t("editor.codeCopiedTitle"),
+      description: t("editor.codeCopiedDesc"),
     });
   };
 
@@ -1199,8 +1197,8 @@ const EditorPage = () => {
     a.download = `${activeTab?.name || "code"}.${ext}`;
     a.click();
     toast({
-      title: "Downloaded!",
-      description: "Your code has been downloaded",
+      title: t("editor.downloadedTitle"),
+      description: t("editor.downloadedDesc"),
     });
   };
 
@@ -1231,7 +1229,7 @@ const EditorPage = () => {
               onValueChange={handleLanguageChange}
             >
               <SelectTrigger className="w-[130px] sm:w-[160px] md:w-[200px]">
-                <SelectValue placeholder="Language" />
+                <SelectValue placeholder={t("editor.language")} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 <SelectItem value="text">Plain Text</SelectItem>
@@ -1265,10 +1263,10 @@ const EditorPage = () => {
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
               <Users className="w-4 h-4" />
               <span className="hidden md:inline">
-                {activeUserCount} developer{activeUserCount !== 1 ? "s" : ""}{" "}
-                collaborating live
+                {activeUserCount} {activeUserCount !== 1 ? t("editor.developers") : t("editor.developer")}{" "}
+                {t("editor.collaborating")}
               </span>
-              <span className="md:hidden">{activeUserCount} live</span>
+              <span className="md:hidden">{activeUserCount} {t("editor.live")}</span>
             </div>
           </div>
 
@@ -1310,10 +1308,10 @@ const EditorPage = () => {
                 });
               }}
               className="px-2 sm:px-3"
-              title={showMinimap ? "Hide Minimap" : "Show Minimap"}
+              title={showMinimap ? t("editor.hideMinimap") : t("editor.showMinimap")}
             >
               <MapIcon className="h-4 w-4" />
-              <span className="hidden lg:inline ml-2">Minimap</span>
+              <span className="hidden lg:inline ml-2">{t("editor.minimap")}</span>
             </Button>
 
             <SetPasswordDialog
@@ -1327,7 +1325,7 @@ const EditorPage = () => {
               className="px-2 sm:px-3"
             >
               <Copy className="h-4 w-4 sm:mr-1 md:mr-2" />
-              <span className="hidden md:inline">Copy</span>
+              <span className="hidden md:inline">{t("editor.copy")}</span>
             </Button>
             <Button
               variant="outline"
@@ -1336,12 +1334,12 @@ const EditorPage = () => {
               className="px-2 sm:px-3"
             >
               <Download className="h-4 w-4 sm:mr-1 md:mr-2" />
-              <span className="hidden md:inline">Download</span>
+              <span className="hidden md:inline">{t("editor.download")}</span>
             </Button>
 
             <Button size="sm" onClick={handleShare} className="px-2 sm:px-3">
               <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
-              <span className="hidden md:inline">Share</span>
+              <span className="hidden md:inline">{t("editor.share")}</span>
             </Button>
           </div>
         </div>
@@ -1424,7 +1422,7 @@ const EditorPage = () => {
             }}
             loading={
               <div className="flex items-center justify-center h-full bg-slate-800">
-                <div className="text-muted-foreground">Loading editor...</div>
+                <div className="text-muted-foreground">{t("editor.loadingEditor")}</div>
               </div>
             }
           />

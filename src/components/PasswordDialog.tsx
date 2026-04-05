@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 // Simple hash function for client-side (in production, use server-side hashing)
 export const hashPassword = (password: string): string => {
@@ -38,18 +39,19 @@ export function SetPasswordDialog({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useTranslation();
 
   const handleSubmit = () => {
     if (!password) {
-      setError("Please enter a password");
+      setError(t("password.errorEmpty"));
       return;
     }
     if (password.length < 4) {
-      setError("Password must be at least 4 characters");
+      setError(t("password.errorShort"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("password.errorMismatch"));
       return;
     }
 
@@ -79,7 +81,7 @@ export function SetPasswordDialog({
             <Lock className="h-4 w-4 sm:mr-2" />
           )}
           <span className="hidden sm:inline">
-            {isProtected ? "Protected" : "Secure"}
+            {isProtected ? t("password.protected") : t("password.secure")}
           </span>
         </Button>
       </DialogTrigger>
@@ -87,23 +89,21 @@ export function SetPasswordDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            {isProtected ? "Update Protection" : "Secure Your Code"}
+            {isProtected ? t("password.updateProtection") : t("password.secureYourCode")}
           </DialogTitle>
           <DialogDescription>
-            {isProtected
-              ? "Update the password or remove protection from this code snippet."
-              : "Set a password to protect your code. Share this password with people you want to give access."}
+            {isProtected ? t("password.updateDesc") : t("password.setDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password.passwordLabel")}</Label>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter password"
+                placeholder={t("password.enterPassword")}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -127,11 +127,11 @@ export function SetPasswordDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword">{t("password.confirmLabel")}</Label>
             <Input
               id="confirmPassword"
               type={showPassword ? "text" : "password"}
-              placeholder="Confirm password"
+              placeholder={t("password.confirmPassword")}
               value={confirmPassword}
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
@@ -152,12 +152,12 @@ export function SetPasswordDialog({
               className="w-full sm:w-auto"
             >
               <Unlock className="h-4 w-4 mr-2" />
-              Remove Protection
+              {t("password.removeProtection")}
             </Button>
           )}
           <Button onClick={handleSubmit} className="w-full sm:w-auto">
             <ShieldCheck className="h-4 w-4 mr-2" />
-            {isProtected ? "Update Password" : "Set Password"}
+            {isProtected ? t("password.updatePassword") : t("password.setPassword")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -176,19 +176,20 @@ export function EnterPasswordDialog({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [attempts, setAttempts] = useState(0);
+  const { t } = useTranslation();
 
   const handleSubmit = () => {
     if (!password) {
-      setError("Please enter the password");
+      setError(t("password.enterPrompt"));
       return;
     }
 
     const isCorrect = onPasswordSubmit(password);
     if (!isCorrect) {
       setAttempts((prev) => prev + 1);
-      setError(`Incorrect password. ${3 - attempts - 1} attempts remaining.`);
+      setError(`${t("password.incorrectPassword")} ${t("password.attemptsRemaining", { count: 3 - attempts - 1 })}`);
       if (attempts >= 2) {
-        setError("Too many failed attempts. Please refresh and try again.");
+        setError(t("password.tooManyAttempts"));
       }
     }
   };
@@ -200,21 +201,20 @@ export function EnterPasswordDialog({
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
             <Lock className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="text-xl font-bold">Protected Code</h2>
+          <h2 className="text-xl font-bold">{t("password.protectedCode")}</h2>
           <p className="text-sm text-muted-foreground">
-            This code snippet is password protected. Enter the password to view
-            and edit.
+            {t("password.protectedDesc")}
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="access-password">Password</Label>
+            <Label htmlFor="access-password">{t("password.passwordLabel")}</Label>
             <div className="relative">
               <Input
                 id="access-password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter password"
+                placeholder={t("password.enterPassword")}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -250,7 +250,7 @@ export function EnterPasswordDialog({
             disabled={attempts >= 3}
           >
             <Unlock className="h-4 w-4 mr-2" />
-            Unlock Code
+            {t("password.unlockCode")}
           </Button>
         </div>
       </div>
