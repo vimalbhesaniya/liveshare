@@ -121,7 +121,7 @@ export const useBrowserNotifications = () => {
 
       // Add vibration for mobile devices
       if (isMobile && 'vibrate' in navigator) {
-        notificationOptions.vibrate = [200, 100, 200];
+        (notificationOptions as NotificationOptions & { vibrate?: number[] }).vibrate = [200, 100, 200];
       }
 
       const notification = new Notification(options.title, notificationOptions);
@@ -130,7 +130,7 @@ export const useBrowserNotifications = () => {
         title: options.title,
         isMobile,
         isDocumentVisible,
-        hasVibration: !!notificationOptions.vibrate
+        hasVibration: !!(notificationOptions as { vibrate?: number[] }).vibrate
       });
 
       // Auto-close after 5 seconds if not requiring interaction
