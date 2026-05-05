@@ -128,8 +128,8 @@ const EditorPage = () => {
     isDocumentVisible,
     requestPermission,
   } = useBrowserNotifications();
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
-  const broadcastTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const broadcastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const isRemoteUpdateRef = useRef(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -152,7 +152,7 @@ const EditorPage = () => {
 
   // Use ref for pending code to avoid state updates on every keystroke for large files
   const pendingCodeRef = useRef<string | null>(null);
-  const stateUpdateTimeoutRef = useRef<NodeJS.Timeout>();
+  const stateUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Font size handlers
   const increaseFontSize = useCallback(() => {
