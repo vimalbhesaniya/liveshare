@@ -653,16 +653,21 @@ const EditorPage = () => {
 
         if (senderId === myUserId) return;
 
-        isRemoteUpdateRef.current = true;
-
         // Update the specific tab with the new code
         setTabs((currentTabs) => {
-          return currentTabs.map((tab) => {
-            if (tab.id === tabId) {
-              return { ...tab, code };
-            }
-            return tab;
-          });
+          const target = currentTabs.find((t) => t.id === tabId);
+          if (!target || target.code === code) return currentTabs;
+
+          isRemoteUpdateRef.current = true;
+          // Safety: always clear the flag shortly after, so a missed
+          // onChange from Monaco can't permanently swallow user keystrokes.
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 100);
+
+          return currentTabs.map((tab) =>
+            tab.id === tabId ? { ...tab, code } : tab,
+          );
         });
       })
       .on("presence", { event: "sync" }, () => {
