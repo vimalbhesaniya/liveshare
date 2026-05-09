@@ -525,6 +525,9 @@ const EditorPage = () => {
           }
 
           isRemoteUpdateRef.current = true;
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 100);
 
           try {
             const parsed = JSON.parse(remoteCode);
@@ -596,6 +599,9 @@ const EditorPage = () => {
         if (senderId === myUserId) return;
 
         isRemoteUpdateRef.current = true;
+        setTimeout(() => {
+          isRemoteUpdateRef.current = false;
+        }, 100);
 
         // Merge tabs instead of overwriting to preserve local edits
         setTabs((currentTabs) => {
@@ -653,16 +659,21 @@ const EditorPage = () => {
 
         if (senderId === myUserId) return;
 
-        isRemoteUpdateRef.current = true;
-
         // Update the specific tab with the new code
         setTabs((currentTabs) => {
-          return currentTabs.map((tab) => {
-            if (tab.id === tabId) {
-              return { ...tab, code };
-            }
-            return tab;
-          });
+          const target = currentTabs.find((t) => t.id === tabId);
+          if (!target || target.code === code) return currentTabs;
+
+          isRemoteUpdateRef.current = true;
+          // Safety: always clear the flag shortly after, so a missed
+          // onChange from Monaco can't permanently swallow user keystrokes.
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 100);
+
+          return currentTabs.map((tab) =>
+            tab.id === tabId ? { ...tab, code } : tab,
+          );
         });
       })
       .on("presence", { event: "sync" }, () => {
@@ -799,13 +810,21 @@ const EditorPage = () => {
     const isLarge = contentLength > LARGE_FILE_CHAR_THRESHOLD;
     const isVeryLarge = contentLength > VERY_LARGE_FILE_THRESHOLD;
 
-    if (isRemoteUpdateRef.current) {
+    const currentTabCode =
+      tabs.find((t) => t.id === activeTabId)?.code ?? "";
+
+    // If this onChange was triggered by a programmatic remote update
+    // (value matches what we just applied), swallow it.
+    if (isRemoteUpdateRef.current && newCode === currentTabCode) {
       isRemoteUpdateRef.current = false;
-      // Still update state for remote changes
-      const newTabs = tabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, code: newCode } : tab,
-      );
-      setTabs(newTabs);
+      return;
+    }
+    // Otherwise, this is a real user edit — proceed even if the flag
+    // was left set, so typing can never get stuck.
+    isRemoteUpdateRef.current = false;
+
+    if (newCode === currentTabCode) {
+      // Nothing actually changed — skip broadcast/db work.
       return;
     }
 
