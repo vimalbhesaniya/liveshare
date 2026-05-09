@@ -810,13 +810,21 @@ const EditorPage = () => {
     const isLarge = contentLength > LARGE_FILE_CHAR_THRESHOLD;
     const isVeryLarge = contentLength > VERY_LARGE_FILE_THRESHOLD;
 
-    if (isRemoteUpdateRef.current) {
+    const currentTabCode =
+      tabs.find((t) => t.id === activeTabId)?.code ?? "";
+
+    // If this onChange was triggered by a programmatic remote update
+    // (value matches what we just applied), swallow it.
+    if (isRemoteUpdateRef.current && newCode === currentTabCode) {
       isRemoteUpdateRef.current = false;
-      // Still update state for remote changes
-      const newTabs = tabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, code: newCode } : tab,
-      );
-      setTabs(newTabs);
+      return;
+    }
+    // Otherwise, this is a real user edit — proceed even if the flag
+    // was left set, so typing can never get stuck.
+    isRemoteUpdateRef.current = false;
+
+    if (newCode === currentTabCode) {
+      // Nothing actually changed — skip broadcast/db work.
       return;
     }
 
