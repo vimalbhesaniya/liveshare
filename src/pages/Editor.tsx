@@ -599,6 +599,9 @@ const EditorPage = () => {
         if (senderId === myUserId) return;
 
         isRemoteUpdateRef.current = true;
+        setTimeout(() => {
+          isRemoteUpdateRef.current = false;
+        }, 100);
 
         // Merge tabs instead of overwriting to preserve local edits
         setTabs((currentTabs) => {
