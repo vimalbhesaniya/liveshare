@@ -525,6 +525,9 @@ const EditorPage = () => {
           }
 
           isRemoteUpdateRef.current = true;
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 100);
 
           try {
             const parsed = JSON.parse(remoteCode);
