@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "deploy": "serverless deploy",
-    "deploy:prod": "serverless deploy --stage prod",
+    "deploy": "bash scripts/deploy.sh dev",
+    "deploy:prod": "bash scripts/deploy.sh prod",
     "remove": "serverless remove",
     "info": "serverless info"
   },
@@ -28,6 +28,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.16.5",
     "serverless": "^3.40.0",
+    "serverless-dotenv-plugin": "^6.0.0",
     "serverless-esbuild": "^1.54.0",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3"

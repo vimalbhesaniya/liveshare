@@ -8,22 +8,23 @@
 
 ## Deploy
 
-From project root (loads `.env` automatically):
+**Run from `server/`** (not the nested `liveshare/` folder):
 
 ```bash
-# Install server dependencies
-cd server && npm install && cd ..
-
-# Deploy (requires MONGODB_URI in root .env)
+cd server
+npm install
 npm run deploy
 ```
 
-Or from `server/`:
+Requires in root `../.env`:
+- `MONGODB_URI` — use [MongoDB Atlas](https://www.mongodb.com/atlas) (not `localhost` for Lambda)
+- `CLIENT_ORIGIN` — your frontend URL
 
+Requires AWS CLI v2 with login session:
 ```bash
-export MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/liveshare"
-export CLIENT_ORIGIN="https://your-frontend.com"
-serverless deploy --stage dev
+# If `aws` not found, install AWS CLI v2 first
+serverless login   # or AWS console sign-in via Serverless
+npm run deploy     # script exports credentials automatically
 ```
 
 ## After deploy

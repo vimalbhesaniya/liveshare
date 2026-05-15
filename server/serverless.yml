@@ -3,9 +3,12 @@ service: liveshare-api
 frameworkVersion: "3"
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-esbuild
 
 custom:
+  dotenv:
+    path: ../.env
   esbuild:
     bundle: true
     minify: false
@@ -103,22 +106,7 @@ resources:
   Outputs:
     HttpApiUrl:
       Description: REST API base URL — set as VITE_BACKEND_URL
-      Value:
-        Fn::Join:
-          - ""
-          - - "https://"
-            - Ref: HttpApi
-            - ".execute-api."
-            - Ref: AWS::Region
-            - ".amazonaws.com"
+      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
     WebSocketUrl:
       Description: WebSocket URL — set as VITE_WS_URL
-      Value:
-        Fn::Join:
-          - ""
-          - - "wss://"
-            - Ref: WebsocketsApi
-            - ".execute-api."
-            - Ref: AWS::Region
-            - ".amazonaws.com/"
-            - ${sls:stage}
+      Value: !Sub "wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
