@@ -22,7 +22,7 @@ Share code instantly with developers worldwide. Perfect for interviews, collabor
 
 - **Frontend**: React 18, TypeScript, Vite
 - **Styling**: Tailwind CSS, shadcn/ui
-- **Backend**: Supabase (Database & Auth)
+- **Backend**: Node.js, Express, Socket.io, MongoDB
 - **Icons**: Lucide React
 
 ## 📦 Installation
@@ -36,25 +36,47 @@ cd liveshare
 
 # Install dependencies
 npm install
+cd server && npm install && cd ..
 
-# Start development server
+# Start MongoDB locally (or use MongoDB Atlas)
+# mongod
+
+# Copy env files
+cp .env.example .env
+cp server/.env.example server/.env
+
+# Start frontend + backend
 npm run dev
 ```
 
 ## 🔧 Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
+- `npm run dev` - Start frontend and backend together
+- `npm run dev:client` - Start Vite dev server only
+- `npm run dev:server` - Start Socket.io + API server only
+- `npm run build` - Build frontend for production
+- `npm run build:server` - Build backend TypeScript
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
 ## 🌐 Environment Variables
 
-Create a `.env` file in the root directory:
+**Frontend → Backend** (root `.env`):
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_BACKEND_URL=
+VITE_API_URL=
+VITE_SOCKET_URL=
+```
+
+Leave empty in development — Vite proxies `/api` and `/socket.io` to the backend on port 3001. For production with a separate API host, set `VITE_BACKEND_URL=https://api.yourdomain.com`.
+
+**Backend** (`server/.env`):
+
+```env
+PORT=3001
+MONGODB_URI=mongodb://localhost:27017/liveshare
+CLIENT_ORIGIN=http://localhost:8080
 ```
 
 ## 📝 License

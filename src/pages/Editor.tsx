@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBrowserNotifications } from "@/hooks/use-browser-notifications";
-import { supabase } from "@/integrations/supabase/client";
+import { getSnippet, createSnippet, updateSnippet } from "@/lib/api";
+import { getRealtime, type RealtimeLike } from "@/lib/realtime";
 import { useTheme } from "next-themes";
 import Editor, { loader } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -132,7 +133,7 @@ const EditorPage = () => {
   const broadcastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const isRemoteUpdateRef = useRef(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const socketRef = useRef<RealtimeLike | null>(null);
 
   // Track last synced state for merging concurrent edits
   const lastSyncedCodeRef = useRef("");
@@ -354,37 +355,31 @@ const EditorPage = () => {
   // Broadcast tabs update to other users
   const broadcastTabsUpdate = useCallback(
     (newTabs: Tab[], newActiveTabId: string) => {
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "tabs_update",
-          payload: {
-            tabs: newTabs,
-            activeTabId: newActiveTabId,
-            senderId: myUserId,
-          },
+      if (socketRef.current && urlCode) {
+        socketRef.current.emit("tabs:update", {
+          uniqueCode: urlCode,
+          tabs: newTabs,
+          activeTabId: newActiveTabId,
+          senderId: myUserId,
         });
       }
     },
-    [myUserId],
+    [myUserId, urlCode],
   );
 
   // Broadcast code changes to other users for real-time collaboration
   const broadcastCodeChange = useCallback(
     (tabId: string, code: string) => {
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "code_change",
-          payload: {
-            tabId,
-            code,
-            senderId: myUserId,
-          },
+      if (socketRef.current && urlCode) {
+        socketRef.current.emit("code:change", {
+          uniqueCode: urlCode,
+          tabId,
+          code,
+          senderId: myUserId,
         });
       }
     },
-    [myUserId],
+    [myUserId, urlCode],
   );
 
   // Load or create code snippet
@@ -397,11 +392,7 @@ const EditorPage = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("code_snippets")
-        .select("*")
-        .eq("unique_code", uniqueCode)
-        .maybeSingle();
+      const { data, error, status } = await getSnippet(uniqueCode);
 
       if (error) {
         console.error("Error loading snippet:", error);
@@ -414,7 +405,7 @@ const EditorPage = () => {
         return;
       }
 
-      if (data) {
+      if (data && status !== 404) {
         setSnippetId(data.id);
         const loadedCode = data.code || "";
         lastSyncedCodeRef.current = loadedCode;
@@ -467,19 +458,15 @@ const EditorPage = () => {
           language: "text",
         };
 
-        const { data: newSnippet, error: insertError } = await supabase
-          .from("code_snippets")
-          .insert({
-            unique_code: uniqueCode,
-            code: JSON.stringify({
-              tabs: [initialTab],
-              activeTabId: "initial",
-              passwordHash: null,
-            }),
-            language: "text",
-          })
-          .select()
-          .single();
+        const { data: newSnippet, error: insertError } = await createSnippet(
+          uniqueCode,
+          JSON.stringify({
+            tabs: [initialTab],
+            activeTabId: "initial",
+            passwordHash: null,
+          }),
+          "text",
+        );
 
         if (insertError) {
           console.error("Error creating snippet:", insertError);
@@ -502,214 +489,198 @@ const EditorPage = () => {
     loadOrCreateSnippet();
   }, [urlCode, navigate, toast]);
 
-  // Set up realtime subscription and presence
+  // Set up realtime (AWS WebSocket or Socket.io locally)
   useEffect(() => {
     if (!urlCode) return;
 
-    const channel = supabase
-      .channel(`code-snippet-${urlCode}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "code_snippets",
-          filter: `unique_code=eq.${urlCode}`,
-        },
-        (payload) => {
-          const remoteCode = payload.new.code || "";
+    const socket = getRealtime();
+    socketRef.current = socket;
 
-          if (remoteCode === lastSentCodeRef.current) {
-            lastSyncedCodeRef.current = remoteCode;
-            return;
-          }
+    const handleSnippetUpdated = ({
+      code: remoteCode,
+      senderId,
+    }: {
+      code: string;
+      senderId?: string;
+    }) => {
+      if (senderId === myUserId) return;
 
-          isRemoteUpdateRef.current = true;
-          setTimeout(() => {
-            isRemoteUpdateRef.current = false;
-          }, 100);
+      if (remoteCode === lastSentCodeRef.current) {
+        lastSyncedCodeRef.current = remoteCode;
+        return;
+      }
 
-          try {
-            const parsed = JSON.parse(remoteCode);
-            if (parsed.tabs && Array.isArray(parsed.tabs)) {
-              // Merge tabs instead of overwriting to handle concurrent edits
-              setTabs((currentTabs) => {
-                const remoteTabs = parsed.tabs as Tab[];
+      isRemoteUpdateRef.current = true;
+      setTimeout(() => {
+        isRemoteUpdateRef.current = false;
+      }, 100);
 
-                // Create a map of remote tabs for easy lookup
-                const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
-                const currentTabMap = new Map(
-                  currentTabs.map((t) => [t.id, t]),
+      try {
+        const parsed = JSON.parse(remoteCode);
+        if (parsed.tabs && Array.isArray(parsed.tabs)) {
+          setTabs((currentTabs) => {
+            const remoteTabs = parsed.tabs as Tab[];
+            const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
+            const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
+
+            const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
+              const currentTab = currentTabMap.get(remoteTab.id);
+
+              if (currentTab) {
+                let baseCode = "";
+                try {
+                  const lastSynced = JSON.parse(lastSyncedCodeRef.current);
+                  const baseTab = lastSynced.tabs?.find(
+                    (t: Tab) => t.id === remoteTab.id,
+                  );
+                  baseCode = baseTab?.code || "";
+                } catch {
+                  baseCode = currentTab.code;
+                }
+
+                const mergedCode = mergeChanges(
+                  baseCode,
+                  remoteTab.code,
+                  currentTab.code,
                 );
 
-                // Merge: for each tab, merge code if both versions exist
-                const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
-                  const currentTab = currentTabMap.get(remoteTab.id);
+                return { ...remoteTab, code: mergedCode };
+              }
 
-                  if (currentTab) {
-                    // Find the base version for this tab from last synced state
-                    let baseCode = "";
-                    try {
-                      const lastSynced = JSON.parse(lastSyncedCodeRef.current);
-                      const baseTab = lastSynced.tabs?.find(
-                        (t: Tab) => t.id === remoteTab.id,
-                      );
-                      baseCode = baseTab?.code || "";
-                    } catch {
-                      baseCode = currentTab.code;
-                    }
+              return remoteTab;
+            });
 
-                    // Merge the code changes
-                    const mergedCode = mergeChanges(
-                      baseCode,
-                      remoteTab.code,
-                      currentTab.code,
-                    );
+            currentTabs.forEach((currentTab) => {
+              if (!remoteTabMap.has(currentTab.id)) {
+                mergedTabs.push(currentTab);
+              }
+            });
 
-                    return {
-                      ...remoteTab,
-                      code: mergedCode,
-                    };
-                  }
+            return mergedTabs;
+          });
+        }
+      } catch {
+        // Legacy format handling
+      }
 
-                  return remoteTab;
-                });
+      lastSyncedCodeRef.current = remoteCode;
+    };
 
-                // Add any local-only tabs that don't exist remotely (newly created)
-                currentTabs.forEach((currentTab) => {
-                  if (!remoteTabMap.has(currentTab.id)) {
-                    mergedTabs.push(currentTab);
-                  }
-                });
+    const handleTabsUpdate = ({
+      tabs: remoteTabs,
+      senderId,
+    }: {
+      tabs: Tab[];
+      senderId: string;
+    }) => {
+      if (senderId === myUserId) return;
 
-                return mergedTabs;
-              });
-              // Don't change active tab - let each user keep their own focus
+      isRemoteUpdateRef.current = true;
+      setTimeout(() => {
+        isRemoteUpdateRef.current = false;
+      }, 100);
+
+      setTabs((currentTabs) => {
+        const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
+        const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
+
+        const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
+          const currentTab = currentTabMap.get(remoteTab.id);
+
+          if (currentTab) {
+            let baseCode = "";
+            try {
+              const lastSynced = JSON.parse(lastSyncedCodeRef.current);
+              const baseTab = lastSynced.tabs?.find(
+                (t: Tab) => t.id === remoteTab.id,
+              );
+              baseCode = baseTab?.code || "";
+            } catch {
+              baseCode = currentTab.code;
             }
-          } catch {
-            // Legacy format handling
+
+            const mergedCode = mergeChanges(
+              baseCode,
+              remoteTab.code,
+              currentTab.code,
+            );
+
+            return { ...remoteTab, code: mergedCode };
           }
 
-          lastSyncedCodeRef.current = remoteCode;
-        },
-      )
-      .on("broadcast", { event: "tabs_update" }, (payload) => {
-        const { tabs: remoteTabs, senderId } = payload.payload;
+          return remoteTab;
+        });
 
-        if (senderId === myUserId) return;
+        currentTabs.forEach((currentTab) => {
+          if (!remoteTabMap.has(currentTab.id)) {
+            mergedTabs.push(currentTab);
+          }
+        });
+
+        return mergedTabs;
+      });
+    };
+
+    const handleCodeChange = ({
+      tabId,
+      code,
+      senderId,
+    }: {
+      tabId: string;
+      code: string;
+      senderId: string;
+    }) => {
+      if (senderId === myUserId) return;
+
+      setTabs((currentTabs) => {
+        const target = currentTabs.find((t) => t.id === tabId);
+        if (!target || target.code === code) return currentTabs;
 
         isRemoteUpdateRef.current = true;
         setTimeout(() => {
           isRemoteUpdateRef.current = false;
         }, 100);
 
-        // Merge tabs instead of overwriting to preserve local edits
-        setTabs((currentTabs) => {
-          const remoteTabMap = new Map(
-            (remoteTabs as Tab[]).map((t) => [t.id, t]),
-          );
-          const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
-
-          // Merge: preserve local code for tabs being edited
-          const mergedTabs: Tab[] = (remoteTabs as Tab[]).map((remoteTab) => {
-            const currentTab = currentTabMap.get(remoteTab.id);
-
-            if (currentTab) {
-              // Find base version for merging
-              let baseCode = "";
-              try {
-                const lastSynced = JSON.parse(lastSyncedCodeRef.current);
-                const baseTab = lastSynced.tabs?.find(
-                  (t: Tab) => t.id === remoteTab.id,
-                );
-                baseCode = baseTab?.code || "";
-              } catch {
-                baseCode = currentTab.code;
-              }
-
-              // Merge the code
-              const mergedCode = mergeChanges(
-                baseCode,
-                remoteTab.code,
-                currentTab.code,
-              );
-
-              return {
-                ...remoteTab,
-                code: mergedCode,
-              };
-            }
-
-            return remoteTab;
-          });
-
-          // Add any local-only tabs
-          currentTabs.forEach((currentTab) => {
-            if (!remoteTabMap.has(currentTab.id)) {
-              mergedTabs.push(currentTab);
-            }
-          });
-
-          return mergedTabs;
-        });
-        // Don't change active tab for other users - let them keep their own focus
-      })
-      .on("broadcast", { event: "code_change" }, (payload) => {
-        const { tabId, code, senderId } = payload.payload;
-
-        if (senderId === myUserId) return;
-
-        // Update the specific tab with the new code
-        setTabs((currentTabs) => {
-          const target = currentTabs.find((t) => t.id === tabId);
-          if (!target || target.code === code) return currentTabs;
-
-          isRemoteUpdateRef.current = true;
-          // Safety: always clear the flag shortly after, so a missed
-          // onChange from Monaco can't permanently swallow user keystrokes.
-          setTimeout(() => {
-            isRemoteUpdateRef.current = false;
-          }, 100);
-
-          return currentTabs.map((tab) =>
-            tab.id === tabId ? { ...tab, code } : tab,
-          );
-        });
-      })
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        const selections: UserSelection[] = [];
-        const uniqueUsers = new Set<string>();
-
-        Object.keys(state).forEach((key) => {
-          const presences = state[key] as Array<Record<string, unknown>>;
-          presences.forEach((presence) => {
-            if (presence.userId) {
-              uniqueUsers.add(presence.userId as string);
-              if (presence.userId !== myUserId && presence.selection) {
-                selections.push(presence.selection as UserSelection);
-              }
-            }
-          });
-        });
-
-        setUserSelections(selections);
-        setActiveUserCount(uniqueUsers.size);
-      })
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({
-            userId: myUserId,
-            selection: null,
-          });
-        }
+        return currentTabs.map((tab) =>
+          tab.id === tabId ? { ...tab, code } : tab,
+        );
       });
+    };
 
-    channelRef.current = channel;
+    const handlePresenceSync = ({
+      count,
+      selections,
+    }: {
+      count: number;
+      selections: UserSelection[];
+    }) => {
+      const others = selections.filter((s) => s.userId !== myUserId);
+      setUserSelections(others);
+      setActiveUserCount(count);
+    };
+
+    const joinRoom = () => {
+      socket.emit("room:join", { uniqueCode: urlCode, userId: myUserId });
+    };
+
+    socket.on("connect", joinRoom);
+    socket.on("snippet:updated", handleSnippetUpdated);
+    socket.on("tabs:update", handleTabsUpdate);
+    socket.on("code:change", handleCodeChange);
+    socket.on("presence:sync", handlePresenceSync);
+
+    if (socket.connected) {
+      joinRoom();
+    }
 
     return () => {
-      supabase.removeChannel(channel);
-      // Clean up timeouts
+      socket.emit("room:leave", { uniqueCode: urlCode });
+      socket.off("connect", joinRoom);
+      socket.off("snippet:updated", handleSnippetUpdated);
+      socket.off("tabs:update", handleTabsUpdate);
+      socket.off("code:change", handleCodeChange);
+      socket.off("presence:sync", handlePresenceSync);
+
       if (broadcastTimeoutRef.current) {
         clearTimeout(broadcastTimeoutRef.current);
       }
@@ -734,18 +705,25 @@ const EditorPage = () => {
 
     lastSentCodeRef.current = dataToSave;
 
-    const { error } = await supabase
-      .from("code_snippets")
-      .update({
+    if (socketRef.current) {
+      socketRef.current.emit("snippet:save", {
+        uniqueCode: urlCode,
         code: dataToSave,
         language: activeTab?.language || "javascript",
-      })
-      .eq("unique_code", urlCode);
-
-    if (error) {
-      console.error("Error updating snippet:", error);
-    } else {
+        senderId: myUserId,
+      });
       lastSyncedCodeRef.current = dataToSave;
+    } else {
+      const { error } = await updateSnippet(
+        urlCode,
+        dataToSave,
+        activeTab?.language || "javascript",
+      );
+      if (error) {
+        console.error("Error updating snippet:", error);
+      } else {
+        lastSyncedCodeRef.current = dataToSave;
+      }
     }
   };
 
@@ -761,17 +739,14 @@ const EditorPage = () => {
         passwordHash: hash,
       });
       lastSentCodeRef.current = dataToSave;
-      supabase
-        .from("code_snippets")
-        .update({ code: dataToSave })
-        .eq("unique_code", urlCode)
-        .then(() => {
+      updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
+        () => {
           toast({
             title: t("editor.codeProtectedTitle"),
-            description:
-              t("editor.codeProtectedDesc"),
+            description: t("editor.codeProtectedDesc"),
           });
-        });
+        },
+      );
     } else {
       setPasswordHash(null);
       // Save immediately without password
@@ -781,16 +756,14 @@ const EditorPage = () => {
         passwordHash: null,
       });
       lastSentCodeRef.current = dataToSave;
-      supabase
-        .from("code_snippets")
-        .update({ code: dataToSave })
-        .eq("unique_code", urlCode)
-        .then(() => {
+      updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
+        () => {
           toast({
             title: t("editor.protectionRemovedTitle"),
             description: t("editor.protectionRemovedDesc"),
           });
-        });
+        },
+      );
     }
   };
 
@@ -1079,7 +1052,7 @@ const EditorPage = () => {
 
     // Set up selection change listener
     editor.onDidChangeCursorSelection((e) => {
-      if (!urlCode || !channelRef.current) return;
+      if (!urlCode || !socketRef.current) return;
 
       const selection = e.selection;
       const model = editor.getModel();
@@ -1089,7 +1062,8 @@ const EditorPage = () => {
       const end = model.getOffsetAt(selection.getEndPosition());
 
       if (start !== end) {
-        channelRef.current.track({
+        socketRef.current.emit("selection:change", {
+          uniqueCode: urlCode,
           userId: myUserId,
           selection: {
             userId: myUserId,
@@ -1099,7 +1073,8 @@ const EditorPage = () => {
           },
         });
       } else {
-        channelRef.current.track({
+        socketRef.current.emit("selection:change", {
+          uniqueCode: urlCode,
           userId: myUserId,
           selection: null,
         });
