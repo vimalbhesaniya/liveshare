@@ -1,6 +1,5 @@
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { connectDb } from "../db.js";
-import { CodeSnippet } from "../models/CodeSnippet.js";
+import { saveSnippet } from "../services/snippet.js";
 import {
   broadcastToRoom,
   syncPresence,
@@ -93,16 +92,26 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     case "snippet:save": {
       if (!body.uniqueCode || body.code === undefined) break;
-      await connectDb();
-      const update: Record<string, string> = { code: body.code };
-      if (body.language) update.language = body.language;
+      try {
+        await saveSnippet(body.uniqueCode, body.code, body.language);
+        await broadcastToRoom(
+          endpoint,
+          body.uniqueCode,
+          {
+            event: "snippet:updated",
+            code: body.code,
+            senderId: body.senderId,
+          },
+          connectionId,
+        );
+      } catch (err) {
+        console.error("snippet:save error:", err);
+      }
+      break;
+    }
 
-      await CodeSnippet.findOneAndUpdate(
-        { uniqueCode: body.uniqueCode },
-        update,
-        { new: true },
-      );
-
+    case "snippet:sync": {
+      if (!body.uniqueCode || body.code === undefined) break;
       await broadcastToRoom(
         endpoint,
         body.uniqueCode,

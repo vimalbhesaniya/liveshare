@@ -69,3 +69,18 @@ export async function updateSnippet(
     body: JSON.stringify({ code, language }),
   });
 }
+
+/** Save on page close — uses keepalive so the request finishes after unload. */
+export function saveSnippetKeepalive(
+  uniqueCode: string,
+  code: string,
+  language: string,
+) {
+  const url = `${API_BASE}/api/snippets/${encodeURIComponent(uniqueCode)}`;
+  return fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, language }),
+    keepalive: true,
+  });
+}

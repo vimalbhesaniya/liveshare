@@ -24,7 +24,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBrowserNotifications } from "@/hooks/use-browser-notifications";
-import { getSnippet, createSnippet, updateSnippet } from "@/lib/api";
+import {
+  getSnippet,
+  createSnippet,
+  updateSnippet,
+  saveSnippetKeepalive,
+} from "@/lib/api";
 import { getRealtime, type RealtimeLike } from "@/lib/realtime";
 import { useTheme } from "next-themes";
 import Editor, { loader } from "@monaco-editor/react";
@@ -138,6 +143,14 @@ const EditorPage = () => {
   // Track last synced state for merging concurrent edits
   const lastSyncedCodeRef = useRef("");
   const lastSentCodeRef = useRef("");
+  const isDirtyRef = useRef(false);
+  const tabsRef = useRef(tabs);
+  const activeTabIdRef = useRef(activeTabId);
+  const passwordHashRef = useRef(passwordHash);
+
+  tabsRef.current = tabs;
+  activeTabIdRef.current = activeTabId;
+  passwordHashRef.current = passwordHash;
 
   // Get current active tab
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
@@ -693,39 +706,87 @@ const EditorPage = () => {
     };
   }, [urlCode, myUserId, mergeChanges]);
 
-  // Update database when tabs change (with debouncing)
-  const updateDatabase = async (newTabs: Tab[]) => {
-    if (!snippetId || !urlCode) return;
-
-    const dataToSave = JSON.stringify({
+  const buildSavePayload = useCallback((newTabs: Tab[]) => {
+    return JSON.stringify({
       tabs: newTabs,
-      activeTabId: activeTabId,
-      passwordHash: passwordHash,
+      activeTabId: activeTabIdRef.current,
+      passwordHash: passwordHashRef.current,
     });
+  }, []);
 
-    lastSentCodeRef.current = dataToSave;
+  // Persist to MongoDB (REST) and notify other users (WebSocket)
+  const updateDatabase = useCallback(
+    async (newTabs: Tab[]) => {
+      if (!urlCode) return;
 
-    if (socketRef.current) {
-      socketRef.current.emit("snippet:save", {
-        uniqueCode: urlCode,
-        code: dataToSave,
-        language: activeTab?.language || "javascript",
-        senderId: myUserId,
-      });
-      lastSyncedCodeRef.current = dataToSave;
-    } else {
-      const { error } = await updateSnippet(
-        urlCode,
-        dataToSave,
-        activeTab?.language || "javascript",
-      );
+      const lang =
+        newTabs.find((t) => t.id === activeTabIdRef.current)?.language ||
+        "text";
+      const dataToSave = buildSavePayload(newTabs);
+      lastSentCodeRef.current = dataToSave;
+
+      const { error } = await updateSnippet(urlCode, dataToSave, lang);
       if (error) {
         console.error("Error updating snippet:", error);
-      } else {
-        lastSyncedCodeRef.current = dataToSave;
+        toast({
+          title: t("editor.errorTitle"),
+          description: t("editor.errorSaveSnippet"),
+          variant: "destructive",
+        });
+        return;
       }
-    }
-  };
+
+      lastSyncedCodeRef.current = dataToSave;
+      isDirtyRef.current = false;
+
+      socketRef.current?.emit("snippet:sync", {
+        uniqueCode: urlCode,
+        code: dataToSave,
+        senderId: myUserId,
+      });
+    },
+    [urlCode, myUserId, buildSavePayload, toast, t],
+  );
+
+  const flushSave = useCallback(() => {
+    if (!urlCode || !isDirtyRef.current) return;
+    const dataToSave = buildSavePayload(tabsRef.current);
+    const lang =
+      tabsRef.current.find((t) => t.id === activeTabIdRef.current)?.language ||
+      "text";
+    saveSnippetKeepalive(urlCode, dataToSave, lang);
+    lastSentCodeRef.current = dataToSave;
+    isDirtyRef.current = false;
+  }, [urlCode, buildSavePayload]);
+
+  // Save when leaving the page
+  useEffect(() => {
+    const onLeave = () => flushSave();
+    window.addEventListener("beforeunload", onLeave);
+    window.addEventListener("pagehide", onLeave);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      window.removeEventListener("pagehide", onLeave);
+    };
+  }, [flushSave]);
+
+  // Backup autosave every 30s while editing
+  useEffect(() => {
+    if (!urlCode) return;
+    const interval = setInterval(() => {
+      if (isDirtyRef.current) {
+        updateDatabase(tabsRef.current);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [urlCode, updateDatabase]);
+
+  // Flush save when leaving the editor room
+  useEffect(() => {
+    return () => {
+      flushSave();
+    };
+  }, [urlCode, flushSave]);
 
   // Handle password setting/removal
   const handleSetPassword = (password: string | null) => {
@@ -740,11 +801,18 @@ const EditorPage = () => {
       });
       lastSentCodeRef.current = dataToSave;
       updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
-        () => {
-          toast({
-            title: t("editor.codeProtectedTitle"),
-            description: t("editor.codeProtectedDesc"),
-          });
+        ({ error }) => {
+          if (!error) {
+            socketRef.current?.emit("snippet:sync", {
+              uniqueCode: urlCode,
+              code: dataToSave,
+              senderId: myUserId,
+            });
+            toast({
+              title: t("editor.codeProtectedTitle"),
+              description: t("editor.codeProtectedDesc"),
+            });
+          }
         },
       );
     } else {
@@ -757,11 +825,18 @@ const EditorPage = () => {
       });
       lastSentCodeRef.current = dataToSave;
       updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
-        () => {
-          toast({
-            title: t("editor.protectionRemovedTitle"),
-            description: t("editor.protectionRemovedDesc"),
-          });
+        ({ error }) => {
+          if (!error) {
+            socketRef.current?.emit("snippet:sync", {
+              uniqueCode: urlCode,
+              code: dataToSave,
+              senderId: myUserId,
+            });
+            toast({
+              title: t("editor.protectionRemovedTitle"),
+              description: t("editor.protectionRemovedDesc"),
+            });
+          }
         },
       );
     }
@@ -800,6 +875,8 @@ const EditorPage = () => {
       // Nothing actually changed — skip broadcast/db work.
       return;
     }
+
+    isDirtyRef.current = true;
 
     // Always broadcast code changes immediately for real-time collaboration
     broadcastCodeChange(activeTabId, newCode);
@@ -897,6 +974,7 @@ const EditorPage = () => {
     const newTabs = [...tabs, newTab];
     setTabs(newTabs);
     setActiveTabId(newTab.id);
+    isDirtyRef.current = true;
     broadcastTabsUpdate(newTabs, newTab.id);
     updateDatabase(newTabs);
   };

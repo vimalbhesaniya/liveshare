@@ -119,6 +119,7 @@
     "errorTitle": "Error",
     "errorLoadSnippet": "Failed to load code snippet",
     "errorCreateSnippet": "Failed to create code snippet",
+    "errorSaveSnippet": "Failed to save changes. Check your connection.",
     "codeProtectedTitle": "Code Protected!",
     "codeProtectedDesc": "Share the password with people you want to give access.",
     "protectionRemovedTitle": "Protection Removed",

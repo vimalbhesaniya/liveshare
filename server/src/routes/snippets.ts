@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { connectDb } from "../db.js";
 import { CodeSnippet } from "../models/CodeSnippet.js";
+import { saveSnippet } from "../services/snippet.js";
 
 const router = Router();
 
@@ -81,19 +82,19 @@ router.patch("/:uniqueCode", async (req, res) => {
     const { code, language } = req.body;
     const update: Record<string, string> = {};
 
-    if (code !== undefined) update.code = code;
-    if (language !== undefined) update.language = language;
-
-    const snippet = await CodeSnippet.findOneAndUpdate(
-      { uniqueCode: req.params.uniqueCode },
-      update,
-      { new: true },
-    ).lean();
-
-    if (!snippet) {
-      res.status(404).json({ error: "Snippet not found" });
+    if (code === undefined) {
+      res.status(400).json({ error: "code is required" });
       return;
     }
+
+    if (language !== undefined) update.language = language;
+
+    const doc = await saveSnippet(
+      req.params.uniqueCode,
+      code,
+      update.language,
+    );
+    const snippet = doc.toObject();
 
     res.json({
       id: snippet._id.toString(),

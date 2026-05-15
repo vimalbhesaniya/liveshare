@@ -7,6 +7,8 @@ class AwsRealtimeClient implements RealtimeLike {
   private ws: WebSocket | null = null;
   private handlers = new Map<string, Set<Handler>>();
   private url: string;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private shouldReconnect = true;
 
   constructor(url: string) {
     this.url = url;
@@ -22,6 +24,10 @@ class AwsRealtimeClient implements RealtimeLike {
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       this.dispatch("connect", {});
     };
 
@@ -37,6 +43,7 @@ class AwsRealtimeClient implements RealtimeLike {
 
     this.ws.onclose = () => {
       this.dispatch("disconnect", {});
+      this.scheduleReconnect();
     };
 
     this.ws.onerror = () => {
@@ -44,7 +51,21 @@ class AwsRealtimeClient implements RealtimeLike {
     };
   }
 
+  private scheduleReconnect() {
+    if (!this.shouldReconnect || this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.ws = null;
+      this.connect();
+    }, 2000);
+  }
+
   disconnect() {
+    this.shouldReconnect = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
   }

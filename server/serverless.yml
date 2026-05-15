@@ -1,4 +1,4 @@
-service: liveshare
+service: liveshare-api
 
 frameworkVersion: "3"
 
@@ -102,11 +102,3 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
-
-  Outputs:
-    HttpApiUrl:
-      Description: REST API base URL — set as VITE_BACKEND_URL
-      Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-    WebSocketUrl:
-      Description: WebSocket URL — set as VITE_WS_URL
-      Value: !Sub "wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"

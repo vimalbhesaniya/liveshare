@@ -158,16 +158,8 @@ export function registerSocketHandlers(io: Server) {
         if (!uniqueCode || code === undefined) return;
 
         try {
-          const { CodeSnippet } = await import("../models/CodeSnippet.js");
-          const update: Record<string, string> = { code };
-          if (language) update.language = language;
-
-          await CodeSnippet.findOneAndUpdate(
-            { uniqueCode },
-            update,
-            { new: true },
-          );
-
+          const { saveSnippet } = await import("../services/snippet.js");
+          await saveSnippet(uniqueCode, code, language);
           socket.to(roomKey(uniqueCode)).emit("snippet:updated", {
             code,
             senderId,
@@ -175,6 +167,22 @@ export function registerSocketHandlers(io: Server) {
         } catch (err) {
           console.error("snippet:save error:", err);
         }
+      },
+    );
+
+    socket.on(
+      "snippet:sync",
+      ({
+        uniqueCode,
+        code,
+        senderId,
+      }: {
+        uniqueCode: string;
+        code: string;
+        senderId?: string;
+      }) => {
+        if (!uniqueCode || code === undefined) return;
+        socket.to(roomKey(uniqueCode)).emit("snippet:updated", { code, senderId });
       },
     );
 
