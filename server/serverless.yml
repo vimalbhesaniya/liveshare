@@ -1,4 +1,4 @@
-service: liveshare-api
+service: liveshare
 
 frameworkVersion: "3"
 
