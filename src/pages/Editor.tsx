@@ -32,21 +32,27 @@ import {
 } from "@/lib/api";
 import { getRealtime, type RealtimeLike } from "@/lib/realtime";
 import { useTheme } from "next-themes";
-import Editor, { loader } from "@monaco-editor/react";
+import "@/lib/monaco-setup";
+import Editor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import * as monaco from "monaco-editor";
-
-// Configure Monaco Editor loader to work with any host/IP
-// This fixes issues when accessing via IP address instead of localhost
-if (typeof window !== "undefined") {
-  // Configure Monaco to use CDN for workers - works from any origin (localhost, IP, domain)
-  loader.config({
-    paths: {
-      vs: "https://cdn.jsdelivr.net/npm/monaco-editor@latest/min/vs",
-    },
-  });
-}
+import {
+  computeTextOps,
+  applyOpsToModel,
+  getIsApplyingRemoteOps,
+  type TextOp,
+} from "@/lib/text-ops";
+import { throttle, debounce } from "@/lib/throttle";
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  isDraftNewerThanServer,
+  type DraftRecord,
+} from "@/lib/draft-storage";
+import { stripTabsForBroadcast, mergeTabMeta, type TabMeta } from "@/lib/tab-meta";
 import { TabBar, Tab, createNewTab } from "@/components/TabBar";
+import { DraftRecoveryDialog } from "@/components/DraftRecoveryDialog";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
@@ -139,6 +145,17 @@ const EditorPage = () => {
   const isRemoteUpdateRef = useRef(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const socketRef = useRef<RealtimeLike | null>(null);
+  const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
+  const syncBaseRef = useRef<Map<string, string>>(new Map());
+  const pendingDocOpsRef = useRef<{
+    tabId: string;
+    baseLength: number;
+    ops: TextOp[];
+  } | null>(null);
+  const serverLoadedAtRef = useRef(0);
+  const [pendingDraft, setPendingDraft] = useState<DraftRecord | null>(null);
+  const [showDraftRecovery, setShowDraftRecovery] = useState(false);
+  const [codeLength, setCodeLength] = useState(0);
 
   // Track last synced state for merging concurrent edits
   const lastSyncedCodeRef = useRef("");
@@ -160,13 +177,8 @@ const EditorPage = () => {
   const LARGE_FILE_CHAR_THRESHOLD = 100000; // ~1250 lines
   const VERY_LARGE_FILE_THRESHOLD = 300000; // ~3750 lines - use plain textarea
 
-  const codeLength = activeTab?.code?.length || 0;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
   const isVeryLargeFile = codeLength > VERY_LARGE_FILE_THRESHOLD;
-
-  // Use ref for pending code to avoid state updates on every keystroke for large files
-  const pendingCodeRef = useRef<string | null>(null);
-  const stateUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Font size handlers
   const increaseFontSize = useCallback(() => {
@@ -360,34 +372,95 @@ const EditorPage = () => {
     [],
   );
 
+  const getModelLanguage = (lang: string) =>
+    languageMap[lang] || "plaintext";
+
+  const getOrCreateModel = useCallback(
+    (tab: Tab): editor.ITextModel => {
+      const existing = modelsRef.current.get(tab.id);
+      if (existing && !existing.isDisposed()) {
+        return existing;
+      }
+      const uri = monaco.Uri.parse(
+        `inmemory://liveshare/${urlCode ?? "local"}/${tab.id}`,
+      );
+      const model = monaco.editor.createModel(
+        tab.code,
+        getModelLanguage(tab.language),
+        uri,
+      );
+      modelsRef.current.set(tab.id, model);
+      syncBaseRef.current.set(tab.id, tab.code);
+      return model;
+    },
+    [urlCode],
+  );
+
+  const disposeModel = (tabId: string) => {
+    const model = modelsRef.current.get(tabId);
+    if (model && !model.isDisposed()) {
+      model.dispose();
+    }
+    modelsRef.current.delete(tabId);
+    syncBaseRef.current.delete(tabId);
+  };
+
+  const getTabsWithModelCode = useCallback((): Tab[] => {
+    return tabsRef.current.map((tab) => ({
+      ...tab,
+      code: modelsRef.current.get(tab.id)?.getValue() ?? tab.code,
+    }));
+  }, []);
+
+  const syncTabCodeFromModel = useCallback((tabId: string) => {
+    const model = modelsRef.current.get(tabId);
+    if (!model) return;
+    const code = model.getValue();
+    setTabs((prev) =>
+      prev.map((t) => (t.id === tabId ? { ...t, code } : t)),
+    );
+    syncBaseRef.current.set(tabId, code);
+  }, []);
+
+  const flushDocOps = useCallback(() => {
+    const pending = pendingDocOpsRef.current;
+    if (!pending || !socketRef.current || !urlCode) return;
+    pendingDocOpsRef.current = null;
+    socketRef.current.emit("doc:ops", {
+      uniqueCode: urlCode,
+      tabId: pending.tabId,
+      senderId: myUserId,
+      baseLength: pending.baseLength,
+      ops: pending.ops,
+    });
+  }, [urlCode, myUserId]);
+
+  const throttledFlushDocOps = useRef(
+    throttle(() => flushDocOps(), 33),
+  ).current;
+
+  const queueDocOps = useCallback(
+    (tabId: string, baseLength: number, ops: TextOp[]) => {
+      if (ops.length === 0) return;
+      pendingDocOpsRef.current = { tabId, baseLength, ops };
+      throttledFlushDocOps();
+    },
+    [throttledFlushDocOps],
+  );
+
   // Generate random unique code
   const generateUniqueCode = () => {
     return Math.random().toString(36).substring(2, 10);
   };
 
-  // Broadcast tabs update to other users
+  // Broadcast tab metadata only (no code payloads)
   const broadcastTabsUpdate = useCallback(
     (newTabs: Tab[], newActiveTabId: string) => {
       if (socketRef.current && urlCode) {
         socketRef.current.emit("tabs:update", {
           uniqueCode: urlCode,
-          tabs: newTabs,
+          tabs: stripTabsForBroadcast(newTabs),
           activeTabId: newActiveTabId,
-          senderId: myUserId,
-        });
-      }
-    },
-    [myUserId, urlCode],
-  );
-
-  // Broadcast code changes to other users for real-time collaboration
-  const broadcastCodeChange = useCallback(
-    (tabId: string, code: string) => {
-      if (socketRef.current && urlCode) {
-        socketRef.current.emit("code:change", {
-          uniqueCode: urlCode,
-          tabId,
-          code,
           senderId: myUserId,
         });
       }
@@ -422,6 +495,9 @@ const EditorPage = () => {
         setSnippetId(data.id);
         const loadedCode = data.code || "";
         lastSyncedCodeRef.current = loadedCode;
+        serverLoadedAtRef.current = Date.now();
+
+        const localDraft = await loadDraft(uniqueCode);
 
         // Try to parse tabs from stored data
         try {
@@ -429,6 +505,17 @@ const EditorPage = () => {
           if (parsed.tabs && Array.isArray(parsed.tabs)) {
             setTabs(parsed.tabs);
             setActiveTabId(parsed.activeTabId || parsed.tabs[0]?.id);
+            if (
+              localDraft &&
+              isDraftNewerThanServer(
+                localDraft,
+                loadedCode,
+                serverLoadedAtRef.current,
+              )
+            ) {
+              setPendingDraft(localDraft);
+              setShowDraftRecovery(true);
+            }
             // Handle password protection
             if (parsed.passwordHash) {
               setPasswordHash(parsed.passwordHash);
@@ -569,6 +656,17 @@ const EditorPage = () => {
               }
             });
 
+            mergedTabs.forEach((tab) => {
+              const model = modelsRef.current.get(tab.id);
+              if (model && model.getValue() !== tab.code) {
+                if (tab.id === activeTabIdRef.current) {
+                  isRemoteUpdateRef.current = true;
+                }
+                model.setValue(tab.code);
+                syncBaseRef.current.set(tab.id, tab.code);
+              }
+            });
+
             return mergedTabs;
           });
         }
@@ -583,57 +681,54 @@ const EditorPage = () => {
       tabs: remoteTabs,
       senderId,
     }: {
-      tabs: Tab[];
+      tabs: TabMeta[];
       senderId: string;
     }) => {
       if (senderId === myUserId) return;
 
-      isRemoteUpdateRef.current = true;
-      setTimeout(() => {
-        isRemoteUpdateRef.current = false;
-      }, 100);
-
       setTabs((currentTabs) => {
-        const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
-        const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
-
-        const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
-          const currentTab = currentTabMap.get(remoteTab.id);
-
-          if (currentTab) {
-            let baseCode = "";
-            try {
-              const lastSynced = JSON.parse(lastSyncedCodeRef.current);
-              const baseTab = lastSynced.tabs?.find(
-                (t: Tab) => t.id === remoteTab.id,
-              );
-              baseCode = baseTab?.code || "";
-            } catch {
-              baseCode = currentTab.code;
-            }
-
-            const mergedCode = mergeChanges(
-              baseCode,
-              remoteTab.code,
-              currentTab.code,
-            );
-
-            return { ...remoteTab, code: mergedCode };
-          }
-
-          return remoteTab;
-        });
-
-        currentTabs.forEach((currentTab) => {
-          if (!remoteTabMap.has(currentTab.id)) {
-            mergedTabs.push(currentTab);
-          }
-        });
-
-        return mergedTabs;
+        const getCode = (tabId: string) =>
+          modelsRef.current.get(tabId)?.getValue() ??
+          currentTabs.find((t) => t.id === tabId)?.code ??
+          "";
+        return mergeTabMeta(currentTabs, remoteTabs, getCode);
       });
     };
 
+    const handleDocOps = ({
+      tabId,
+      senderId,
+      baseLength,
+      ops,
+    }: {
+      tabId: string;
+      senderId: string;
+      baseLength: number;
+      ops: TextOp[];
+    }) => {
+      if (senderId === myUserId) return;
+
+      const tab = tabsRef.current.find((t) => t.id === tabId);
+      if (!tab) return;
+
+      const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
+      const applied = applyOpsToModel(model, ops, baseLength);
+
+      if (applied) {
+        syncBaseRef.current.set(tabId, model.getValue());
+        if (tabId === activeTabIdRef.current) {
+          isRemoteUpdateRef.current = true;
+          setTimeout(() => {
+            isRemoteUpdateRef.current = false;
+          }, 50);
+        }
+        if (tabId !== activeTabIdRef.current) {
+          syncTabCodeFromModel(tabId);
+        }
+      }
+    };
+
+    /** Legacy clients may still send full document replaces */
     const handleCodeChange = ({
       tabId,
       code,
@@ -645,19 +740,22 @@ const EditorPage = () => {
     }) => {
       if (senderId === myUserId) return;
 
-      setTabs((currentTabs) => {
-        const target = currentTabs.find((t) => t.id === tabId);
-        if (!target || target.code === code) return currentTabs;
+      const tab = tabsRef.current.find((t) => t.id === tabId);
+      if (!tab) return;
 
-        isRemoteUpdateRef.current = true;
-        setTimeout(() => {
-          isRemoteUpdateRef.current = false;
-        }, 100);
+      const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
+      if (model.getValue() === code) return;
 
-        return currentTabs.map((tab) =>
-          tab.id === tabId ? { ...tab, code } : tab,
-        );
-      });
+      isRemoteUpdateRef.current = true;
+      model.setValue(code);
+      syncBaseRef.current.set(tabId, code);
+      setTimeout(() => {
+        isRemoteUpdateRef.current = false;
+      }, 50);
+
+      if (tabId !== activeTabIdRef.current) {
+        syncTabCodeFromModel(tabId);
+      }
     };
 
     const handlePresenceSync = ({
@@ -679,6 +777,7 @@ const EditorPage = () => {
     socket.on("connect", joinRoom);
     socket.on("snippet:updated", handleSnippetUpdated);
     socket.on("tabs:update", handleTabsUpdate);
+    socket.on("doc:ops", handleDocOps);
     socket.on("code:change", handleCodeChange);
     socket.on("presence:sync", handlePresenceSync);
 
@@ -691,8 +790,11 @@ const EditorPage = () => {
       socket.off("connect", joinRoom);
       socket.off("snippet:updated", handleSnippetUpdated);
       socket.off("tabs:update", handleTabsUpdate);
+      socket.off("doc:ops", handleDocOps);
       socket.off("code:change", handleCodeChange);
       socket.off("presence:sync", handlePresenceSync);
+      throttledFlushDocOps.flush();
+      throttledFlushDocOps.cancel();
 
       if (broadcastTimeoutRef.current) {
         clearTimeout(broadcastTimeoutRef.current);
@@ -700,29 +802,35 @@ const EditorPage = () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-      if (stateUpdateTimeoutRef.current) {
-        clearTimeout(stateUpdateTimeoutRef.current);
-      }
     };
-  }, [urlCode, myUserId, mergeChanges]);
+  }, [
+    urlCode,
+    myUserId,
+    mergeChanges,
+    getOrCreateModel,
+    syncTabCodeFromModel,
+    throttledFlushDocOps,
+  ]);
 
-  const buildSavePayload = useCallback((newTabs: Tab[]) => {
+  const buildSavePayload = useCallback((newTabs?: Tab[]) => {
+    const tabsToSave = newTabs ?? getTabsWithModelCode();
     return JSON.stringify({
-      tabs: newTabs,
+      tabs: tabsToSave,
       activeTabId: activeTabIdRef.current,
       passwordHash: passwordHashRef.current,
     });
-  }, []);
+  }, [getTabsWithModelCode]);
 
   // Persist to MongoDB (REST) and notify other users (WebSocket)
   const updateDatabase = useCallback(
-    async (newTabs: Tab[]) => {
+    async (newTabs?: Tab[]) => {
       if (!urlCode) return;
 
+      const tabsToSave = newTabs ?? getTabsWithModelCode();
       const lang =
-        newTabs.find((t) => t.id === activeTabIdRef.current)?.language ||
+        tabsToSave.find((t) => t.id === activeTabIdRef.current)?.language ||
         "text";
-      const dataToSave = buildSavePayload(newTabs);
+      const dataToSave = buildSavePayload(tabsToSave);
       lastSentCodeRef.current = dataToSave;
 
       const { error } = await updateSnippet(urlCode, dataToSave, lang);
@@ -738,6 +846,8 @@ const EditorPage = () => {
 
       lastSyncedCodeRef.current = dataToSave;
       isDirtyRef.current = false;
+      await clearDraft(urlCode);
+      await saveDraft(urlCode, dataToSave, Date.now());
 
       socketRef.current?.emit("snippet:sync", {
         uniqueCode: urlCode,
@@ -745,19 +855,42 @@ const EditorPage = () => {
         senderId: myUserId,
       });
     },
-    [urlCode, myUserId, buildSavePayload, toast, t],
+    [urlCode, myUserId, buildSavePayload, getTabsWithModelCode, toast, t],
   );
 
   const flushSave = useCallback(() => {
     if (!urlCode || !isDirtyRef.current) return;
-    const dataToSave = buildSavePayload(tabsRef.current);
+    const dataToSave = buildSavePayload(getTabsWithModelCode());
     const lang =
       tabsRef.current.find((t) => t.id === activeTabIdRef.current)?.language ||
       "text";
     saveSnippetKeepalive(urlCode, dataToSave, lang);
     lastSentCodeRef.current = dataToSave;
     isDirtyRef.current = false;
-  }, [urlCode, buildSavePayload]);
+  }, [urlCode, buildSavePayload, getTabsWithModelCode]);
+
+  // IndexedDB draft every 1s while editing
+  useEffect(() => {
+    if (!urlCode || isLoading) return;
+    const interval = setInterval(() => {
+      if (!isDirtyRef.current) return;
+      const payload = buildSavePayload(getTabsWithModelCode());
+      saveDraft(urlCode, payload).catch(() => {});
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [urlCode, isLoading, buildSavePayload, getTabsWithModelCode]);
+
+  // Sync active tab model when switching tabs
+  useEffect(() => {
+    if (isLoading || !editorRef.current) return;
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab) return;
+    const model = getOrCreateModel(tab);
+    if (editorRef.current.getModel() !== model) {
+      editorRef.current.setModel(model);
+    }
+    setCodeLength(model.getValue().length);
+  }, [activeTabId, isLoading, tabs, getOrCreateModel]);
 
   // Save when leaving the page
   useEffect(() => {
@@ -775,7 +908,7 @@ const EditorPage = () => {
     if (!urlCode) return;
     const interval = setInterval(() => {
       if (isDirtyRef.current) {
-        updateDatabase(tabsRef.current);
+        updateDatabase();
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -852,110 +985,67 @@ const EditorPage = () => {
     return false;
   };
 
+  const debouncedSizeCheck = useRef(
+    debounce((len: number) => setCodeLength(len), 200),
+  ).current;
+
+  const debouncedTabsSync = useRef(
+    debounce((tabId: string) => syncTabCodeFromModel(tabId), 500),
+  ).current;
+
   const handleCodeChange = (newCode: string) => {
-    // Use character length for fast size detection (no split needed)
-    const contentLength = newCode.length;
-    const isLarge = contentLength > LARGE_FILE_CHAR_THRESHOLD;
-    const isVeryLarge = contentLength > VERY_LARGE_FILE_THRESHOLD;
+    if (getIsApplyingRemoteOps()) return;
 
-    const currentTabCode =
-      tabs.find((t) => t.id === activeTabId)?.code ?? "";
+    const tabId = activeTabIdRef.current;
+    const syncBase = syncBaseRef.current.get(tabId) ?? "";
 
-    // If this onChange was triggered by a programmatic remote update
-    // (value matches what we just applied), swallow it.
-    if (isRemoteUpdateRef.current && newCode === currentTabCode) {
+    if (isRemoteUpdateRef.current && newCode === syncBase) {
       isRemoteUpdateRef.current = false;
       return;
     }
-    // Otherwise, this is a real user edit — proceed even if the flag
-    // was left set, so typing can never get stuck.
     isRemoteUpdateRef.current = false;
 
-    if (newCode === currentTabCode) {
-      // Nothing actually changed — skip broadcast/db work.
-      return;
-    }
+    if (newCode === syncBase) return;
 
     isDirtyRef.current = true;
 
-    // Always broadcast code changes immediately for real-time collaboration
-    broadcastCodeChange(activeTabId, newCode);
+    const ops = computeTextOps(syncBase, newCode);
+    const baseLength = syncBase.length;
+    syncBaseRef.current.set(tabId, newCode);
+    queueDocOps(tabId, baseLength, ops);
 
-    // For very large files, debounce state updates to prevent UI freeze
-    if (isVeryLarge) {
-      pendingCodeRef.current = newCode;
+    debouncedSizeCheck(newCode.length);
 
-      if (stateUpdateTimeoutRef.current) {
-        clearTimeout(stateUpdateTimeoutRef.current);
-      }
+    const isLarge = newCode.length > LARGE_FILE_CHAR_THRESHOLD;
+    const isVeryLarge = newCode.length > VERY_LARGE_FILE_THRESHOLD;
 
-      // Debounce state update for very large files
-      stateUpdateTimeoutRef.current = setTimeout(() => {
-        if (pendingCodeRef.current !== null) {
-          const newTabs = tabs.map((tab) =>
-            tab.id === activeTabId
-              ? { ...tab, code: pendingCodeRef.current! }
-              : tab,
-          );
-          setTabs(newTabs);
-
-          // Update database with longer debounce
-          if (updateTimeoutRef.current) {
-            clearTimeout(updateTimeoutRef.current);
-          }
-          updateTimeoutRef.current = setTimeout(() => {
-            updateDatabase(newTabs);
-          }, 2000);
-
-          pendingCodeRef.current = null;
-        }
-      }, 150); // Small debounce for state update
-
-      // For very large files, debounce tab broadcasts but still broadcast code changes
-      if (broadcastTimeoutRef.current) {
-        clearTimeout(broadcastTimeoutRef.current);
-      }
-      broadcastTimeoutRef.current = setTimeout(() => {
-        const newTabs = tabs.map((tab) =>
-          tab.id === activeTabId ? { ...tab, code: newCode } : tab,
-        );
-        broadcastTabsUpdate(newTabs, activeTabId);
-      }, 1000);
-
-      return;
-    }
-
-    // Normal flow for smaller files
-    const newTabs = tabs.map((tab) =>
-      tab.id === activeTabId ? { ...tab, code: newCode } : tab,
-    );
-    setTabs(newTabs);
+    debouncedTabsSync(tabId);
 
     if (broadcastTimeoutRef.current) {
       clearTimeout(broadcastTimeoutRef.current);
     }
-
-    // For large files, debounce tab broadcasts; for small files, broadcast immediately
-    if (isLarge) {
+    const metaTabs = getTabsWithModelCode();
+    const tabBroadcastDelay = isLarge || isVeryLarge ? 1000 : 0;
+    if (tabBroadcastDelay > 0) {
       broadcastTimeoutRef.current = setTimeout(() => {
-        broadcastTabsUpdate(newTabs, activeTabId);
-      }, 1000);
-    } else {
-      broadcastTabsUpdate(newTabs, activeTabId);
+        broadcastTabsUpdate(metaTabs, activeTabId);
+      }, tabBroadcastDelay);
     }
 
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
-
-    // Increase debounce time for large files
-    const debounceTime = isLarge ? 1500 : 300;
+    const debounceTime = isVeryLarge ? 2000 : isLarge ? 1500 : 300;
     updateTimeoutRef.current = setTimeout(() => {
-      updateDatabase(newTabs);
+      updateDatabase();
     }, debounceTime);
   };
 
   const handleLanguageChange = (newLanguage: string) => {
+    const model = modelsRef.current.get(activeTabId);
+    if (model) {
+      monaco.editor.setModelLanguage(model, getModelLanguage(newLanguage));
+    }
     const newTabs = tabs.map((tab) =>
       tab.id === activeTabId ? { ...tab, language: newLanguage } : tab,
     );
@@ -964,13 +1054,46 @@ const EditorPage = () => {
     updateDatabase(newTabs);
   };
 
+  const handleRestoreDraft = () => {
+    if (!pendingDraft || !urlCode) return;
+    try {
+      const parsed = JSON.parse(pendingDraft.payload);
+      if (parsed.tabs && Array.isArray(parsed.tabs)) {
+        modelsRef.current.forEach((m) => {
+          if (!m.isDisposed()) m.dispose();
+        });
+        modelsRef.current.clear();
+        syncBaseRef.current.clear();
+        setTabs(parsed.tabs);
+        setActiveTabId(parsed.activeTabId || parsed.tabs[0]?.id);
+        if (parsed.passwordHash) {
+          setPasswordHash(parsed.passwordHash);
+          setIsAuthenticated(false);
+        }
+        isDirtyRef.current = true;
+      }
+    } catch {
+      /* ignore */
+    }
+    setShowDraftRecovery(false);
+    setPendingDraft(null);
+  };
+
+  const handleDiscardDraft = async () => {
+    if (urlCode) await clearDraft(urlCode);
+    setShowDraftRecovery(false);
+    setPendingDraft(null);
+  };
+
   // Tab management functions
   const handleTabSelect = (tabId: string) => {
+    syncTabCodeFromModel(activeTabId);
     setActiveTabId(tabId);
   };
 
   const handleTabAdd = () => {
     const newTab = createNewTab(tabs.length + 1);
+    getOrCreateModel(newTab);
     const newTabs = [...tabs, newTab];
     setTabs(newTabs);
     setActiveTabId(newTab.id);
@@ -990,6 +1113,7 @@ const EditorPage = () => {
       newActiveTabId = newTabs[Math.max(0, tabIndex - 1)]?.id || newTabs[0].id;
     }
 
+    disposeModel(tabId);
     setTabs(newTabs);
     setActiveTabId(newActiveTabId);
     broadcastTabsUpdate(newTabs, newActiveTabId);
@@ -1115,32 +1239,52 @@ const EditorPage = () => {
     isDocumentVisible,
   ]);
 
-  // Handle Monaco editor mount
-  const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
+  const emitSelectionChange = useRef(
+    throttle(
+      (payload: {
+        uniqueCode: string;
+        userId: string;
+        selection: UserSelection | null;
+      }) => {
+        socketRef.current?.emit("selection:change", payload);
+      },
+      100,
+    ),
+  ).current;
 
-    // Register custom commands for font size shortcuts
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.UpArrow, () => {
+  // Handle Monaco editor mount
+  const handleEditorMount = (editorInstance: editor.IStandaloneCodeEditor) => {
+    editorRef.current = editorInstance;
+
+    const tab =
+      tabsRef.current.find((t) => t.id === activeTabIdRef.current) ??
+      tabsRef.current[0];
+    if (tab) {
+      const model = getOrCreateModel(tab);
+      editorInstance.setModel(model);
+      setCodeLength(model.getValue().length);
+    }
+
+    editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.UpArrow, () => {
       increaseFontSize();
     });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.DownArrow, () => {
+    editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.DownArrow, () => {
       decreaseFontSize();
     });
 
-    // Set up selection change listener
-    editor.onDidChangeCursorSelection((e) => {
+    editorInstance.onDidChangeCursorSelection((e) => {
       if (!urlCode || !socketRef.current) return;
 
       const selection = e.selection;
-      const model = editor.getModel();
+      const model = editorInstance.getModel();
       if (!model) return;
 
       const start = model.getOffsetAt(selection.getStartPosition());
       const end = model.getOffsetAt(selection.getEndPosition());
 
       if (start !== end) {
-        socketRef.current.emit("selection:change", {
+        emitSelectionChange({
           uniqueCode: urlCode,
           userId: myUserId,
           selection: {
@@ -1151,7 +1295,7 @@ const EditorPage = () => {
           },
         });
       } else {
-        socketRef.current.emit("selection:change", {
+        emitSelectionChange({
           uniqueCode: urlCode,
           userId: myUserId,
           selection: null,
@@ -1225,7 +1369,11 @@ const EditorPage = () => {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(activeTab?.code || "");
+    const code =
+      modelsRef.current.get(activeTabId)?.getValue() ??
+      activeTab?.code ??
+      "";
+    navigator.clipboard.writeText(code);
     toast({
       title: t("editor.codeCopiedTitle"),
       description: t("editor.codeCopiedDesc"),
@@ -1233,7 +1381,11 @@ const EditorPage = () => {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([activeTab?.code || ""], { type: "text/plain" });
+    const code =
+      modelsRef.current.get(activeTabId)?.getValue() ??
+      activeTab?.code ??
+      "";
+    const blob = new Blob([code], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1440,9 +1592,10 @@ const EditorPage = () => {
             language={
               languageMap[activeTab?.language || "javascript"] || "plaintext"
             }
-            value={activeTab?.code || ""}
+            defaultValue={activeTab?.code || ""}
             onChange={(value) => handleCodeChange(value || "")}
             onMount={handleEditorMount}
+            keepCurrentModel={true}
             theme={monacoTheme}
             options={{
               fontSize: fontSize,
@@ -1499,6 +1652,13 @@ const EditorPage = () => {
             }
           />
         </div>
+
+        <DraftRecoveryDialog
+          open={showDraftRecovery}
+          draftSavedAt={pendingDraft?.updatedAt ?? 0}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
       </div>
     </div>
   );

@@ -140,7 +140,13 @@
     "collabLeft": "Collaborator left",
     "collabsLeft": "Collaborators left",
     "startedCollab": "started collaborating",
-    "stoppedCollab": "stopped collaborating"
+    "stoppedCollab": "stopped collaborating",
+    "draftRecoveryTitle": "Recover unsaved changes?",
+    "draftRecoveryDesc": "A local draft from {{when}} is newer than the saved version.",
+    "draftRestore": "Restore draft",
+    "draftDiscard": "Use saved version",
+    "draftSaved": "Draft saved locally",
+    "offlineEditing": "Offline — changes saved locally"
   },
   "feedback": {
     "title": "We'd love your feedback",

@@ -7,6 +7,8 @@ import {
   wsEndpoint,
 } from "../lib/ws-broadcast.js";
 
+type TextOp = { t: "i"; pos: number; text: string } | { t: "d"; pos: number; len: number };
+
 type WsBody = {
   action: string;
   uniqueCode?: string;
@@ -18,6 +20,8 @@ type WsBody = {
   activeTabId?: string;
   selection?: unknown;
   language?: string;
+  baseLength?: number;
+  ops?: TextOp[];
 };
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
@@ -56,6 +60,24 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
         selection: null,
       });
       await syncPresence(endpoint, body.uniqueCode);
+      break;
+    }
+
+    case "doc:ops": {
+      if (!body.uniqueCode || !body.tabId || !body.ops) break;
+      await broadcastToRoom(
+        endpoint,
+        body.uniqueCode,
+        {
+          event: "doc:ops",
+          uniqueCode: body.uniqueCode,
+          tabId: body.tabId,
+          senderId: body.senderId,
+          baseLength: body.baseLength ?? 0,
+          ops: body.ops,
+        },
+        connectionId,
+      );
       break;
     }
 

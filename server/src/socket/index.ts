@@ -89,6 +89,20 @@ export function registerSocketHandlers(io: Server) {
     });
 
     socket.on(
+      "doc:ops",
+      (payload: {
+        uniqueCode: string;
+        tabId: string;
+        senderId: string;
+        baseLength: number;
+        ops: unknown[];
+      }) => {
+        if (!payload.uniqueCode || !payload.tabId) return;
+        socket.to(roomKey(payload.uniqueCode)).emit("doc:ops", payload);
+      },
+    );
+
+    socket.on(
       "code:change",
       (payload: {
         uniqueCode: string;

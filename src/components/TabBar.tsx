@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import {
   Plus,
   X,
@@ -47,7 +47,7 @@ type TabBarProps = {
   onTabsReorder: (tabs: Tab[]) => void;
 };
 
-export function TabBar({
+function TabBarInner({
   tabs,
   activeTabId,
   onTabSelect,
@@ -473,6 +473,8 @@ export function TabBar({
     </div>
   );
 }
+
+export const TabBar = memo(TabBarInner);
 
 export function createNewTab(tabNumber: number): Tab {
   return {
