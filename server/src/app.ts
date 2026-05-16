@@ -4,11 +4,25 @@ import snippetsRouter from "./routes/snippets.js";
 
 export function createApp() {
   const app = express();
-  const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:8080";
+  const raw = process.env.CLIENT_ORIGIN || "http://localhost:8080";
+  const allowedOrigins = raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   app.use(
     cors({
-      origin: clientOrigin.split(",").map((o) => o.trim()),
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(null, false);
+      },
       credentials: true,
     }),
   );

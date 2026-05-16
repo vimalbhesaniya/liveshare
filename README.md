@@ -69,7 +69,26 @@ VITE_API_URL=
 VITE_SOCKET_URL=
 ```
 
-Leave empty in development — Vite proxies `/api` and `/socket.io` to the backend on port 3001. For production with a separate API host, set `VITE_BACKEND_URL=https://api.yourdomain.com`.
+Leave empty in development — Vite proxies `/api` and `/socket.io` to the backend on port 3001.
+
+**Production on Vercel (`www.liveshare.dev`, etc.)**
+
+Your `vercel.json` must proxy `/api/*` to API Gateway **before** the SPA fallback. Otherwise every request (including `PATCH /api/snippets/...`) is rewritten to `index.html`, and saves break.
+
+1. In `vercel.json`, set the `destination` of the first rewrite to your **HTTP API** URL from `serverless deploy` (same host you use for `VITE_BACKEND_URL` if calling the API directly).
+2. Set Lambda env (and redeploy) with both apex and `www` if you use both:
+
+```env
+CLIENT_ORIGIN=https://liveshare.dev,https://www.liveshare.dev
+```
+
+3. Realtime WebSockets are not proxied by that rule. Set at **build** time:
+
+```env
+VITE_WS_URL=wss://YOUR_WS_API.execute-api.REGION.amazonaws.com/dev
+```
+
+**Alternative:** omit the Vercel API rewrite and set `VITE_BACKEND_URL` / `VITE_WS_URL` at build time so the browser calls AWS directly (CORS must allow your site).
 
 **Backend** (`server/.env`):
 
