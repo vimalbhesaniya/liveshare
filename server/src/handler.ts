@@ -1,17 +1,17 @@
-import serverless from "serverless-http";
 import type { Handler } from "aws-lambda";
-import { connectDb } from "./db.js";
+import type { Application } from "express";
 import { createApp } from "./app.js";
 
-let cachedHandler: ReturnType<typeof serverless> | undefined;
+// CJS package — use require for Lambda bundle compatibility
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const configure = require("@codegenie/serverless-express") as (options: {
+  app: Application;
+}) => Handler;
 
-export const api: Handler = async (event, context) => {
+const app = createApp();
+const expressHandler = configure({ app });
+
+export const api: Handler = async (event, context, callback) => {
   context.callbackWaitsForEmptyEventLoop = false;
-  await connectDb();
-
-  if (!cachedHandler) {
-    cachedHandler = serverless(createApp());
-  }
-
-  return cachedHandler(event, context);
+  return expressHandler(event, context, callback);
 };

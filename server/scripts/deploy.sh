@@ -25,5 +25,9 @@ else
   exit 1
 fi
 
+if [ -z "${MONGODB_URI:-}" ] && [ -z "${SNIPPETS_TABLE:-}" ]; then
+  echo "Note: Lambda uses DynamoDB (SNIPPETS_TABLE) — MongoDB optional for local dev only."
+fi
+
 echo "Deploying liveshare-api..."
 npx serverless deploy --stage "${1:-dev}"

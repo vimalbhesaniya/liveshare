@@ -1,4 +1,4 @@
-import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import type { APIGatewayProxyWebsocketHandlerV2 } from "aws-lambda";
 import {
   deleteConnection,
   getConnection,
@@ -6,7 +6,7 @@ import {
   wsEndpoint,
 } from "../lib/ws-broadcast.js";
 
-export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   const connectionId = event.requestContext.connectionId!;
   const endpoint = wsEndpoint(event);
 

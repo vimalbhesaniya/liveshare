@@ -16,7 +16,10 @@ custom:
     target: node20
     platform: node
     format: cjs
+    packager: npm
     external:
+      - mongoose
+      - mongodb
       - "@aws-sdk/client-apigatewaymanagementapi"
       - "@aws-sdk/client-dynamodb"
       - "@aws-sdk/util-dynamodb"
@@ -26,12 +29,29 @@ provider:
   runtime: nodejs20.x
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
-  memorySize: 512
+  memorySize: 1024
   timeout: 29
+  httpApi:
+    cors:
+      allowedOrigins:
+        - https://www.liveshare.dev
+        - https://liveshare.dev
+        - http://localhost:8080
+      allowedMethods:
+        - GET
+        - POST
+        - PATCH
+        - OPTIONS
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+      allowCredentials: true
   environment:
-    MONGODB_URI: ${env:MONGODB_URI}
-    CLIENT_ORIGIN: ${env:CLIENT_ORIGIN, 'http://localhost:8080'}
+    NODE_ENV: production
+    MONGODB_URI: ${env:MONGODB_URI, ''}
+    CLIENT_ORIGIN: ${env:CLIENT_ORIGIN, 'https://www.liveshare.dev,https://liveshare.dev'}
     CONNECTIONS_TABLE: ${self:service}-connections-${sls:stage}
+    SNIPPETS_TABLE: ${self:service}-snippets-${sls:stage}
   iam:
     role:
       statements:
@@ -45,6 +65,7 @@ provider:
           Resource:
             - !GetAtt ConnectionsTable.Arn
             - !Sub "${ConnectionsTable.Arn}/index/*"
+            - !GetAtt SnippetsTable.Arn
         - Effect: Allow
           Action:
             - execute-api:ManageConnections
@@ -82,6 +103,18 @@ functions:
 
 resources:
   Resources:
+    SnippetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.SNIPPETS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: uniqueCode
+            AttributeType: S
+        KeySchema:
+          - AttributeName: uniqueCode
+            KeyType: HASH
+
     ConnectionsTable:
       Type: AWS::DynamoDB::Table
       Properties:

@@ -94,7 +94,7 @@ VITE_WS_URL=wss://YOUR_WS_API.execute-api.REGION.amazonaws.com/dev
 
 ```env
 PORT=3001
-MONGODB_URI=mongodb://localhost:27017/liveshare
+MONGODB_URI=mongodb+srv://liveshare:liveshare@cluster0.ioui8sl.mongodb.net/?appName=Cluster0
 CLIENT_ORIGIN=http://localhost:8080
 ```
 

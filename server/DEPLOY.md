@@ -17,8 +17,15 @@ npm run deploy
 ```
 
 Requires in root `../.env`:
-- `MONGODB_URI` — use [MongoDB Atlas](https://www.mongodb.com/atlas) (not `localhost` for Lambda)
-- `CLIENT_ORIGIN` — your frontend URL
+- `CLIENT_ORIGIN` — e.g. `https://www.liveshare.dev,https://liveshare.dev`
+- `MONGODB_URI` — optional on Lambda (snippets use **DynamoDB** automatically). For local dev only, use `mongodb://localhost:27017/liveshare`
+
+Re-authenticate AWS if deploy fails:
+
+```bash
+aws login
+# or: serverless login
+```
 
 Requires AWS CLI v2 with login session:
 ```bash

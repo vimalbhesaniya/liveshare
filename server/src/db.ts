@@ -10,21 +10,44 @@ declare global {
 const cached = global.mongooseCache ?? { conn: null, promise: null };
 global.mongooseCache = cached;
 
+function validateUri(uri: string) {
+  if (
+    process.env.AWS_LAMBDA_FUNCTION_NAME &&
+    (uri.includes("localhost") || uri.includes("127.0.0.1"))
+  ) {
+    throw new Error(
+      "MONGODB_URI cannot be localhost on Lambda. Use a MongoDB Atlas connection string.",
+    );
+  }
+}
+
 export async function connectDb(): Promise<typeof mongoose> {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     throw new Error("MONGODB_URI is not set");
   }
 
+  validateUri(uri);
+
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
+    mongoose.set("strictQuery", true);
     cached.promise = mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
       maxPoolSize: 5,
+      bufferCommands: false,
     });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    cached.conn = null;
+    throw err;
+  }
+
   return cached.conn;
 }
