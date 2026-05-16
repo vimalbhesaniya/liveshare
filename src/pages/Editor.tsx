@@ -405,11 +405,29 @@ const EditorPage = () => {
     syncBaseRef.current.delete(tabId);
   };
 
+  /** Read live document text from Monaco models (editor model is source of truth). */
   const getTabsWithModelCode = useCallback((): Tab[] => {
-    return tabsRef.current.map((tab) => ({
-      ...tab,
-      code: modelsRef.current.get(tab.id)?.getValue() ?? tab.code,
-    }));
+    const activeId = activeTabIdRef.current;
+    const liveModel = editorRef.current?.getModel();
+
+    if (liveModel && activeId) {
+      modelsRef.current.set(activeId, liveModel);
+    }
+
+    return tabsRef.current.map((tab) => {
+      let code = tab.code;
+
+      if (tab.id === activeId && liveModel && !liveModel.isDisposed()) {
+        code = liveModel.getValue();
+      } else {
+        const model = modelsRef.current.get(tab.id);
+        if (model && !model.isDisposed()) {
+          code = model.getValue();
+        }
+      }
+
+      return { ...tab, code };
+    });
   }, []);
 
   const syncTabCodeFromModel = useCallback((tabId: string) => {
@@ -799,9 +817,6 @@ const EditorPage = () => {
       if (broadcastTimeoutRef.current) {
         clearTimeout(broadcastTimeoutRef.current);
       }
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
     };
   }, [
     urlCode,
@@ -812,25 +827,35 @@ const EditorPage = () => {
     throttledFlushDocOps,
   ]);
 
-  const buildSavePayload = useCallback((newTabs?: Tab[]) => {
-    const tabsToSave = newTabs ?? getTabsWithModelCode();
-    return JSON.stringify({
-      tabs: tabsToSave,
-      activeTabId: activeTabIdRef.current,
-      passwordHash: passwordHashRef.current,
-    });
-  }, [getTabsWithModelCode]);
+  const buildSavePayload = useCallback(
+    (metaOverride?: Tab[]) => {
+      const withCode = getTabsWithModelCode();
+      const tabsToSave = metaOverride
+        ? withCode.map((tab) => {
+            const meta = metaOverride.find((m) => m.id === tab.id);
+            return meta ? { ...tab, ...meta, code: tab.code } : tab;
+          })
+        : withCode;
+      return JSON.stringify({
+        tabs: tabsToSave,
+        activeTabId: activeTabIdRef.current,
+        passwordHash: passwordHashRef.current,
+      });
+    },
+    [getTabsWithModelCode],
+  );
 
   // Persist to MongoDB (REST) and notify other users (WebSocket)
   const updateDatabase = useCallback(
-    async (newTabs?: Tab[]) => {
+    async (metaOverride?: Tab[]) => {
       if (!urlCode) return;
 
-      const tabsToSave = newTabs ?? getTabsWithModelCode();
+      const tabsToSave = getTabsWithModelCode();
       const lang =
-        tabsToSave.find((t) => t.id === activeTabIdRef.current)?.language ||
+        (metaOverride?.find((t) => t.id === activeTabIdRef.current)?.language ??
+          tabsToSave.find((t) => t.id === activeTabIdRef.current)?.language) ||
         "text";
-      const dataToSave = buildSavePayload(tabsToSave);
+      const dataToSave = buildSavePayload(metaOverride);
       lastSentCodeRef.current = dataToSave;
 
       const { error } = await updateSnippet(urlCode, dataToSave, lang);
@@ -859,15 +884,20 @@ const EditorPage = () => {
   );
 
   const flushSave = useCallback(() => {
-    if (!urlCode || !isDirtyRef.current) return;
-    const dataToSave = buildSavePayload(getTabsWithModelCode());
+    if (!urlCode) return;
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = undefined;
+    }
+    if (!isDirtyRef.current) return;
+    const dataToSave = buildSavePayload();
     const lang =
       tabsRef.current.find((t) => t.id === activeTabIdRef.current)?.language ||
       "text";
     saveSnippetKeepalive(urlCode, dataToSave, lang);
     lastSentCodeRef.current = dataToSave;
     isDirtyRef.current = false;
-  }, [urlCode, buildSavePayload, getTabsWithModelCode]);
+  }, [urlCode, buildSavePayload]);
 
   // IndexedDB draft every 1s while editing
   useEffect(() => {
@@ -889,6 +919,8 @@ const EditorPage = () => {
     if (editorRef.current.getModel() !== model) {
       editorRef.current.setModel(model);
     }
+    modelsRef.current.set(tab.id, model);
+    syncBaseRef.current.set(tab.id, model.getValue());
     setCodeLength(model.getValue().length);
   }, [activeTabId, isLoading, tabs, getOrCreateModel]);
 
@@ -997,6 +1029,11 @@ const EditorPage = () => {
     if (getIsApplyingRemoteOps()) return;
 
     const tabId = activeTabIdRef.current;
+    const liveModel = editorRef.current?.getModel();
+    if (liveModel && tabId) {
+      modelsRef.current.set(tabId, liveModel);
+    }
+
     const syncBase = syncBaseRef.current.get(tabId) ?? "";
 
     if (isRemoteUpdateRef.current && newCode === syncBase) {
@@ -1260,8 +1297,15 @@ const EditorPage = () => {
       tabsRef.current.find((t) => t.id === activeTabIdRef.current) ??
       tabsRef.current[0];
     if (tab) {
-      const model = getOrCreateModel(tab);
-      editorInstance.setModel(model);
+      let model = editorInstance.getModel();
+      if (!model || model.isDisposed()) {
+        model = getOrCreateModel(tab);
+        editorInstance.setModel(model);
+      } else {
+        // Reuse model created by @monaco-editor/react; keep ref in sync
+        modelsRef.current.set(tab.id, model);
+        syncBaseRef.current.set(tab.id, model.getValue());
+      }
       setCodeLength(model.getValue().length);
     }
 
