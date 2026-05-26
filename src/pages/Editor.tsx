@@ -1131,9 +1131,21 @@ const EditorPage = () => {
     });
   };
 
+  // Lock page scroll — only the editor pane should scroll
+  useEffect(() => {
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, []);
+
   if (snippetReady && passwordHash && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="h-svh overflow-hidden bg-background">
         <Navigation />
         <EnterPasswordDialog onPasswordSubmit={handlePasswordSubmit} />
       </div>
@@ -1141,12 +1153,12 @@ const EditorPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-svh flex-col overflow-hidden bg-background">
       <Navigation />
 
-      <div className="container-fluid mx-auto px-2 sm:px-3 pt-16 sm:pt-[4.5rem] pb-2">
+      <div className="container-fluid mx-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden px-2 sm:px-3 pb-1 pt-14 sm:pt-16">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
+        <div className="mb-2 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
             <Select
               value={activeTab?.language || "javascript"}
@@ -1269,24 +1281,21 @@ const EditorPage = () => {
         </div>
 
         {/* Tab Bar */}
-        <TabBar
-          tabs={tabs}
-          activeTabId={activeTabId}
-          onTabSelect={handleTabSelect}
-          onTabAdd={handleTabAdd}
-          onTabClose={handleTabClose}
-          onTabRename={handleTabRename}
-          onTabColorChange={handleTabColorChange}
-          onTabsReorder={handleTabsReorder}
-        />
+        <div className="shrink-0">
+          <TabBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onTabSelect={handleTabSelect}
+            onTabAdd={handleTabAdd}
+            onTabClose={handleTabClose}
+            onTabRename={handleTabRename}
+            onTabColorChange={handleTabColorChange}
+            onTabsReorder={handleTabsReorder}
+          />
+        </div>
 
         {/* Code Editor */}
-        <div
-          className="relative rounded-b-lg border border-t-0 border-border shadow-lg overflow-hidden"
-          style={{
-            height: "calc(100vh - 148px)",
-          }}
-        >
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-b-lg border border-t-0 border-border shadow-lg">
           {!snippetReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
               <div className="text-sm text-muted-foreground">
