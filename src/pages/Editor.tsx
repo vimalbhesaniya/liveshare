@@ -16,14 +16,10 @@ import {
   Download,
   Plus,
   Minus,
-  AlertTriangle,
   Map as MapIcon,
   Users,
-  Bell,
-  BellOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useBrowserNotifications } from "@/hooks/use-browser-notifications";
 import {
   getSnippet,
   createSnippet,
@@ -39,6 +35,7 @@ import * as monaco from "monaco-editor";
 import {
   computeTextOps,
   applyOpsToModel,
+  applyRemoteCodeToModel,
   getIsApplyingRemoteOps,
   type TextOp,
 } from "@/lib/text-ops";
@@ -50,7 +47,9 @@ import {
   EnterPasswordDialog,
   hashPassword,
 } from "@/components/PasswordDialog";
-import { PageLoader } from "@/components/PageLoader";
+
+const SAVE_DEBOUNCE_MS = 3000;
+const DOC_OPS_THROTTLE_MS = 16;
 
 // Map our language names to Monaco language IDs
 const languageMap: Record<string, string> = {
@@ -101,7 +100,7 @@ const EditorPage = () => {
   ]);
   const [activeTabId, setActiveTabId] = useState("initial");
   const [snippetId, setSnippetId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [snippetReady, setSnippetReady] = useState(false);
   const [passwordHash, setPasswordHash] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [fontSize, setFontSize] = useState(() => {
@@ -110,7 +109,7 @@ const EditorPage = () => {
   });
   const [showMinimap, setShowMinimap] = useState(() => {
     const saved = localStorage.getItem("liveshare-minimap");
-    return saved !== "false"; // Default to true
+    return saved === "true";
   });
 
   // Get app theme and map to Monaco theme
@@ -123,17 +122,7 @@ const EditorPage = () => {
   const [activeUserCount, setActiveUserCount] = useState(0);
   const [myUserId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
-  const {
-    showNotification,
-    isSupported,
-    permission,
-    isSecureContext,
-    isMobile,
-    isDocumentVisible,
-    requestPermission,
-  } = useBrowserNotifications();
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const broadcastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const isRemoteUpdateRef = useRef(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const socketRef = useRef<RealtimeLike | null>(null);
@@ -143,10 +132,11 @@ const EditorPage = () => {
     tabId: string;
     baseLength: number;
     ops: TextOp[];
+    code: string;
   } | null>(null);
-  const serverLoadedAtRef = useRef(0);
-  const [pendingDraft, setPendingDraft] = useState<any | null>(null);
-  const [showDraftRecovery, setShowDraftRecovery] = useState(false);
+  const contentListenerDisposeRef = useRef<monaco.IDisposable | null>(null);
+  const onLocalEditRef = useRef<(code: string) => void>(() => {});
+  const hasLocalEditsRef = useRef(false);
   const [codeLength, setCodeLength] = useState(0);
 
   // Track last synced state for merging concurrent edits
@@ -166,11 +156,8 @@ const EditorPage = () => {
 
   // Performance: detect large content using character count (faster than line count)
   // ~80 chars per line average, so 2000 lines ≈ 160,000 chars
-  const LARGE_FILE_CHAR_THRESHOLD = 100000; // ~1250 lines
-  const VERY_LARGE_FILE_THRESHOLD = 300000; // ~3750 lines - use plain textarea
-
+  const LARGE_FILE_CHAR_THRESHOLD = 100000;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
-  const isVeryLargeFile = codeLength > VERY_LARGE_FILE_THRESHOLD;
 
   // Font size handlers
   const increaseFontSize = useCallback(() => {
@@ -188,83 +175,6 @@ const EditorPage = () => {
       return newSize;
     });
   }, []);
-
-  // Show font size tip toast when user first visits the editor (once per session)
-  useEffect(() => {
-    const tipKey = "liveshare-font-tip-shown";
-    if (sessionStorage.getItem(tipKey)) return;
-    const timeoutId = setTimeout(() => {
-      sessionStorage.setItem(tipKey, "1");
-      toast({
-        title: t("editor.tipTitle"),
-        description: t("editor.tipDesc"),
-      });
-    }, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [toast]);
-
-  // Request browser notification permission when user enters editor
-  useEffect(() => {
-    const requestNotificationPermission = async () => {
-      if (isSupported && permission === "default") {
-        // Check if we can request permissions on mobile
-        if (isMobile && !isSecureContext) {
-          toast({
-            title: t("editor.notifRequireHttps"),
-            description:
-              t("editor.notifRequireHttpsDesc"),
-            variant: "destructive",
-          });
-          return;
-        }
-
-        try {
-          const result = await requestPermission();
-          if (result === "granted") {
-            const mobileMessage = isMobile
-              ? t("editor.notifEnabledDescMobile")
-              : t("editor.notifEnabledDescDesktop");
-
-            toast({
-              title: t("editor.notifEnabledTitle"),
-              description: mobileMessage,
-            });
-          } else if (result === "denied") {
-            const mobileHint = isMobile
-              ? t("editor.notifBlockedMobileHint")
-              : "";
-
-            toast({
-              title: t("editor.notifBlockedTitle"),
-              description: `${t("editor.notifBlockedDesc")}${mobileHint}${t("editor.notifBlockedSuffix")}`,
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.warn("Failed to request notification permission:", error);
-          toast({
-            title: t("editor.notifSetupFailed"),
-            description:
-              t("editor.notifSetupFailedDesc"),
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    // Request permission after a short delay to ensure the page has loaded
-    const timeoutId = setTimeout(requestNotificationPermission, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [
-    isSupported,
-    permission,
-    isSecureContext,
-    isMobile,
-    requestPermission,
-    toast,
-    isDocumentVisible,
-  ]);
 
   // Keyboard shortcuts for font size
   useEffect(() => {
@@ -299,70 +209,6 @@ const EditorPage = () => {
       monaco.editor.setTheme(monacoTheme);
     }
   }, [monacoTheme, resolvedTheme]);
-
-  // Simple line-based merge function for concurrent edits
-  // Optimized for large files with early returns
-  const mergeChanges = useCallback(
-    (base: string, remote: string, local: string): string => {
-      // Fast path: if any two are equal, return the different one
-      if (base === local) return remote;
-      if (base === remote) return local;
-      if (remote === local) return local;
-
-      // For very large content (>500KB), skip complex merge and prefer local
-      const MAX_MERGE_SIZE = 500000;
-      if (
-        base.length > MAX_MERGE_SIZE ||
-        remote.length > MAX_MERGE_SIZE ||
-        local.length > MAX_MERGE_SIZE
-      ) {
-        // For very large files, prefer local changes to avoid expensive merge
-        return local;
-      }
-
-      const baseLines = base.split("\n");
-      const remoteLines = remote.split("\n");
-      const localLines = local.split("\n");
-
-      const mergedLines: string[] = [];
-      const maxLen = Math.max(
-        baseLines.length,
-        remoteLines.length,
-        localLines.length,
-      );
-
-      for (let i = 0; i < maxLen; i++) {
-        const baseLine = baseLines[i] ?? "";
-        const remoteLine = remoteLines[i] ?? "";
-        const localLine = localLines[i] ?? "";
-
-        if (baseLine === localLine && baseLine !== remoteLine) {
-          if (i < remoteLines.length) {
-            mergedLines.push(remoteLine);
-          }
-        } else if (baseLine === remoteLine && baseLine !== localLine) {
-          if (i < localLines.length) {
-            mergedLines.push(localLine);
-          }
-        } else if (baseLine !== localLine && baseLine !== remoteLine) {
-          if (localLine === remoteLine) {
-            mergedLines.push(localLine);
-          } else {
-            if (i < localLines.length) {
-              mergedLines.push(localLine);
-            }
-          }
-        } else {
-          if (i < Math.max(remoteLines.length, localLines.length)) {
-            mergedLines.push(baseLine);
-          }
-        }
-      }
-
-      return mergedLines.join("\n");
-    },
-    [],
-  );
 
   const getModelLanguage = (lang: string) =>
     languageMap[lang] || "plaintext";
@@ -442,17 +288,19 @@ const EditorPage = () => {
       senderId: myUserId,
       baseLength: pending.baseLength,
       ops: pending.ops,
+      code: pending.code,
     });
   }, [urlCode, myUserId]);
 
   const throttledFlushDocOps = useRef(
-    throttle(() => flushDocOps(), 33),
+    throttle(() => flushDocOps(), DOC_OPS_THROTTLE_MS),
   ).current;
 
   const queueDocOps = useCallback(
-    (tabId: string, baseLength: number, ops: TextOp[]) => {
+    (tabId: string, baseLength: number, ops: TextOp[], code: string) => {
       if (ops.length === 0) return;
-      pendingDocOpsRef.current = { tabId, baseLength, ops };
+      throttledFlushDocOps.flush();
+      pendingDocOpsRef.current = { tabId, baseLength, ops, code };
       throttledFlushDocOps();
     },
     [throttledFlushDocOps],
@@ -497,7 +345,7 @@ const EditorPage = () => {
           description: t("editor.errorLoadSnippet"),
           variant: "destructive",
         });
-        setIsLoading(false);
+        setSnippetReady(true);
         return;
       }
 
@@ -579,11 +427,11 @@ const EditorPage = () => {
         }
       }
 
-      setIsLoading(false);
+      setSnippetReady(true);
     };
 
     loadOrCreateSnippet();
-  }, [urlCode, navigate, toast]);
+  }, [urlCode, navigate, toast, t]);
 
   // Set up realtime (AWS WebSocket or Socket.io locally)
   useEffect(() => {
@@ -600,71 +448,42 @@ const EditorPage = () => {
       senderId?: string;
     }) => {
       if (senderId === myUserId) return;
+      if (hasLocalEditsRef.current) return;
 
       if (remoteCode === lastSentCodeRef.current) {
         lastSyncedCodeRef.current = remoteCode;
         return;
       }
 
-      isRemoteUpdateRef.current = true;
-      setTimeout(() => {
-        isRemoteUpdateRef.current = false;
-      }, 100);
-
       try {
         const parsed = JSON.parse(remoteCode);
-        if (parsed.tabs && Array.isArray(parsed.tabs)) {
-          setTabs((currentTabs) => {
-            const remoteTabs = parsed.tabs as Tab[];
-            const remoteTabMap = new Map(remoteTabs.map((t) => [t.id, t]));
-            const currentTabMap = new Map(currentTabs.map((t) => [t.id, t]));
+        if (!parsed.tabs || !Array.isArray(parsed.tabs)) return;
 
-            const mergedTabs: Tab[] = remoteTabs.map((remoteTab) => {
-              const currentTab = currentTabMap.get(remoteTab.id);
+        parsed.tabs.forEach((remoteTab: Tab) => {
+          const tab =
+            tabsRef.current.find((t) => t.id === remoteTab.id) ?? remoteTab;
+          const model = modelsRef.current.get(remoteTab.id) ?? getOrCreateModel(tab);
+          if (model.getValue() !== remoteTab.code) {
+            applyRemoteCodeToModel(model, remoteTab.code);
+            syncBaseRef.current.set(remoteTab.id, remoteTab.code);
+          }
+        });
 
-              if (currentTab) {
-                let baseCode = "";
-                try {
-                  const lastSynced = JSON.parse(lastSyncedCodeRef.current);
-                  const baseTab = lastSynced.tabs?.find(
-                    (t: Tab) => t.id === remoteTab.id,
-                  );
-                  baseCode = baseTab?.code || "";
-                } catch {
-                  baseCode = currentTab.code;
-                }
-
-                const mergedCode = mergeChanges(
-                  baseCode,
-                  remoteTab.code,
-                  currentTab.code,
-                );
-
-                return { ...remoteTab, code: mergedCode };
-              }
-
-              return remoteTab;
-            });
-
-            currentTabs.forEach((currentTab) => {
-              if (!remoteTabMap.has(currentTab.id)) {
-                mergedTabs.push(currentTab);
-              }
-            });
-
-            mergedTabs.forEach((tab) => {
-              const model = modelsRef.current.get(tab.id);
-              if (model && model.getValue() !== tab.code) {
-                if (tab.id === activeTabIdRef.current) {
-                  isRemoteUpdateRef.current = true;
-                }
-                model.setValue(tab.code);
-                syncBaseRef.current.set(tab.id, tab.code);
-              }
-            });
-
-            return mergedTabs;
+        setTabs((currentTabs) => {
+          const remoteTabMap = new Map(
+            (parsed.tabs as Tab[]).map((t) => [t.id, t]),
+          );
+          return currentTabs.map((tab) => {
+            const remoteTab = remoteTabMap.get(tab.id);
+            return remoteTab ? { ...tab, ...remoteTab } : tab;
           });
+        });
+
+        if (parsed.activeTabId) {
+          setActiveTabId(parsed.activeTabId);
+        }
+        if (parsed.passwordHash) {
+          setPasswordHash(parsed.passwordHash);
         }
       } catch {
         // Legacy format handling
@@ -696,11 +515,13 @@ const EditorPage = () => {
       senderId,
       baseLength,
       ops,
+      code,
     }: {
       tabId: string;
       senderId: string;
       baseLength: number;
       ops: TextOp[];
+      code?: string;
     }) => {
       if (senderId === myUserId) return;
 
@@ -708,7 +529,12 @@ const EditorPage = () => {
       if (!tab) return;
 
       const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
-      const applied = applyOpsToModel(model, ops, baseLength);
+      let applied = applyOpsToModel(model, ops, baseLength);
+
+      if (!applied && code !== undefined) {
+        applyRemoteCodeToModel(model, code);
+        applied = true;
+      }
 
       if (applied) {
         syncBaseRef.current.set(tabId, model.getValue());
@@ -716,10 +542,7 @@ const EditorPage = () => {
           isRemoteUpdateRef.current = true;
           setTimeout(() => {
             isRemoteUpdateRef.current = false;
-          }, 50);
-        }
-        if (tabId !== activeTabIdRef.current) {
-          syncTabCodeFromModel(tabId);
+          }, 0);
         }
       }
     };
@@ -742,15 +565,13 @@ const EditorPage = () => {
       const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
       if (model.getValue() === code) return;
 
-      isRemoteUpdateRef.current = true;
-      model.setValue(code);
+      applyRemoteCodeToModel(model, code);
       syncBaseRef.current.set(tabId, code);
-      setTimeout(() => {
-        isRemoteUpdateRef.current = false;
-      }, 50);
-
-      if (tabId !== activeTabIdRef.current) {
-        syncTabCodeFromModel(tabId);
+      if (tabId === activeTabIdRef.current) {
+        isRemoteUpdateRef.current = true;
+        setTimeout(() => {
+          isRemoteUpdateRef.current = false;
+        }, 0);
       }
     };
 
@@ -791,17 +612,13 @@ const EditorPage = () => {
       socket.off("presence:sync", handlePresenceSync);
       throttledFlushDocOps.flush();
       throttledFlushDocOps.cancel();
-
-      if (broadcastTimeoutRef.current) {
-        clearTimeout(broadcastTimeoutRef.current);
-      }
+      contentListenerDisposeRef.current?.dispose();
+      contentListenerDisposeRef.current = null;
     };
   }, [
     urlCode,
     myUserId,
-    mergeChanges,
     getOrCreateModel,
-    syncTabCodeFromModel,
     throttledFlushDocOps,
   ]);
 
@@ -849,18 +666,13 @@ const EditorPage = () => {
 
       lastSyncedCodeRef.current = dataToSave;
       isDirtyRef.current = false;
-
-      socketRef.current?.emit("snippet:sync", {
-        uniqueCode: urlCode,
-        code: dataToSave,
-        senderId: myUserId,
-      });
     },
     [urlCode, myUserId, buildSavePayload, getTabsWithModelCode, toast, t],
   );
 
   const flushSave = useCallback(() => {
     if (!urlCode) return;
+    throttledFlushDocOps.flush();
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = undefined;
@@ -877,7 +689,7 @@ const EditorPage = () => {
 
   // Sync active tab model when switching tabs
   useEffect(() => {
-    if (isLoading || !editorRef.current) return;
+    if (!snippetReady || !editorRef.current) return;
     const tab = tabs.find((t) => t.id === activeTabId);
     if (!tab) return;
     const model = getOrCreateModel(tab);
@@ -887,7 +699,23 @@ const EditorPage = () => {
     modelsRef.current.set(tab.id, model);
     syncBaseRef.current.set(tab.id, model.getValue());
     setCodeLength(model.getValue().length);
-  }, [activeTabId, isLoading, tabs, getOrCreateModel]);
+  }, [activeTabId, snippetReady, tabs, getOrCreateModel]);
+
+  // Hydrate Monaco models once snippet data arrives
+  useEffect(() => {
+    if (!snippetReady || hasLocalEditsRef.current) return;
+
+    tabsRef.current.forEach((tab) => {
+      const model = modelsRef.current.get(tab.id) ?? getOrCreateModel(tab);
+      if (model.getValue() !== tab.code) {
+        applyRemoteCodeToModel(model, tab.code);
+        syncBaseRef.current.set(tab.id, tab.code);
+      }
+    });
+    setCodeLength(
+      modelsRef.current.get(activeTabIdRef.current)?.getValue().length ?? 0,
+    );
+  }, [snippetReady, getOrCreateModel]);
 
   // Save when leaving the page
   useEffect(() => {
@@ -986,10 +814,6 @@ const EditorPage = () => {
     debounce((len: number) => setCodeLength(len), 200),
   ).current;
 
-  const debouncedTabsSync = useRef(
-    debounce((tabId: string) => syncTabCodeFromModel(tabId), 500),
-  ).current;
-
   const handleCodeChange = (newCode: string) => {
     if (getIsApplyingRemoteOps()) return;
 
@@ -1009,39 +833,25 @@ const EditorPage = () => {
 
     if (newCode === syncBase) return;
 
+    hasLocalEditsRef.current = true;
     isDirtyRef.current = true;
 
     const ops = computeTextOps(syncBase, newCode);
     const baseLength = syncBase.length;
     syncBaseRef.current.set(tabId, newCode);
-    queueDocOps(tabId, baseLength, ops);
+    queueDocOps(tabId, baseLength, ops, newCode);
 
     debouncedSizeCheck(newCode.length);
-
-    const isLarge = newCode.length > LARGE_FILE_CHAR_THRESHOLD;
-    const isVeryLarge = newCode.length > VERY_LARGE_FILE_THRESHOLD;
-
-    debouncedTabsSync(tabId);
-
-    if (broadcastTimeoutRef.current) {
-      clearTimeout(broadcastTimeoutRef.current);
-    }
-    const metaTabs = getTabsWithModelCode();
-    const tabBroadcastDelay = isLarge || isVeryLarge ? 1000 : 0;
-    if (tabBroadcastDelay > 0) {
-      broadcastTimeoutRef.current = setTimeout(() => {
-        broadcastTabsUpdate(metaTabs, activeTabId);
-      }, tabBroadcastDelay);
-    }
 
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
-    const debounceTime = isVeryLarge ? 2000 : isLarge ? 1500 : 300;
     updateTimeoutRef.current = setTimeout(() => {
+      throttledFlushDocOps.flush();
       updateDatabase();
-    }, debounceTime);
+    }, SAVE_DEBOUNCE_MS);
   };
+  onLocalEditRef.current = handleCodeChange;
 
   const handleLanguageChange = (newLanguage: string) => {
     const model = modelsRef.current.get(activeTabId);
@@ -1120,96 +930,6 @@ const EditorPage = () => {
     () => `hsl(${Math.random() * 360}, 70%, 60%)`,
   );
 
-  // Track previous user count for notifications
-  const prevUserCountRef = useRef<number>(0);
-
-  // Show notifications when collaborators join/leave
-  useEffect(() => {
-    // Skip notification on initial load
-    if (prevUserCountRef.current === 0 && activeUserCount === 1) {
-      prevUserCountRef.current = activeUserCount;
-      return;
-    }
-
-    // Skip if user count hasn't actually changed
-    if (prevUserCountRef.current === activeUserCount) {
-      return;
-    }
-
-    const previousCount = prevUserCountRef.current;
-    prevUserCountRef.current = activeUserCount;
-
-    // Calculate the change (excluding current user)
-    const previousOthers = Math.max(0, previousCount - 1);
-    const currentOthers = Math.max(0, activeUserCount - 1);
-
-    if (currentOthers > previousOthers) {
-      // Someone joined
-      const newUsers = currentOthers - previousOthers;
-      const title =
-        newUsers === 1 ? t("editor.collabJoined") : t("editor.collabsJoined");
-      const description = `${newUsers} ${newUsers > 1 ? t("editor.developers") : t("editor.developer")} ${t("editor.startedCollab")}`;
-
-      // Show in-app toast notification
-      toast({
-        title,
-        description,
-      });
-
-      // Show browser notification if supported and permitted
-      if (isSupported && permission === "granted") {
-        console.log("Showing collaborator joined notification:", {
-          title,
-          isMobile,
-          isDocumentVisible,
-          permission,
-        });
-        showNotification({
-          title,
-          body: description,
-          tag: "collaborator-joined",
-          requireInteraction: false,
-        });
-      }
-    } else if (currentOthers < previousOthers) {
-      // Someone left
-      const leftUsers = previousOthers - currentOthers;
-      const title =
-        leftUsers === 1 ? t("editor.collabLeft") : t("editor.collabsLeft");
-      const description = `${leftUsers} ${leftUsers > 1 ? t("editor.developers") : t("editor.developer")} ${t("editor.stoppedCollab")}`;
-
-      // Show in-app toast notification
-      toast({
-        title,
-        description,
-      });
-
-      // Show browser notification if supported and permitted
-      if (isSupported && permission === "granted") {
-        console.log("Showing collaborator left notification:", {
-          title,
-          isMobile,
-          isDocumentVisible,
-          permission,
-        });
-        showNotification({
-          title,
-          body: description,
-          tag: "collaborator-left",
-          requireInteraction: false,
-        });
-      }
-    }
-  }, [
-    activeUserCount,
-    toast,
-    isSupported,
-    permission,
-    showNotification,
-    isMobile,
-    isDocumentVisible,
-  ]);
-
   const emitSelectionChange = useRef(
     throttle(
       (payload: {
@@ -1242,6 +962,13 @@ const EditorPage = () => {
       }
       setCodeLength(model.getValue().length);
     }
+
+    contentListenerDisposeRef.current?.dispose();
+    contentListenerDisposeRef.current =
+      editorInstance.onDidChangeModelContent(() => {
+        const value = editorInstance.getModel()?.getValue() ?? "";
+        onLocalEditRef.current(value);
+      });
 
     editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.UpArrow, () => {
       increaseFontSize();
@@ -1404,12 +1131,7 @@ const EditorPage = () => {
     });
   };
 
-  if (isLoading) {
-    return <PageLoader />;
-  }
-
-  // Show password entry dialog if protected and not authenticated
-  if (passwordHash && !isAuthenticated) {
+  if (snippetReady && passwordHash && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -1422,9 +1144,9 @@ const EditorPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <div className="container-fluid mx-auto px-2 sm:px-2 pt-20 sm:pt-24 pb-4 sm:pb-8">
+      <div className="container-fluid mx-auto px-2 sm:px-3 pt-16 sm:pt-[4.5rem] pb-2">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
             <Select
               value={activeTab?.language || "javascript"}
@@ -1560,18 +1282,24 @@ const EditorPage = () => {
 
         {/* Code Editor */}
         <div
-          className="rounded-b-lg border border-t-0 border-border shadow-2xl overflow-hidden"
+          className="relative rounded-b-lg border border-t-0 border-border shadow-lg overflow-hidden"
           style={{
-            height: "calc(100vh - 235px)",
+            height: "calc(100vh - 148px)",
           }}
         >
+          {!snippetReady && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+              <div className="text-sm text-muted-foreground">
+                {t("editor.loadingEditor")}
+              </div>
+            </div>
+          )}
           <Editor
             height="100%"
             language={
               languageMap[activeTab?.language || "javascript"] || "plaintext"
             }
             defaultValue={activeTab?.code || ""}
-            onChange={(value) => handleCodeChange(value || "")}
             onMount={handleEditorMount}
             keepCurrentModel={true}
             theme={monacoTheme}
@@ -1583,44 +1311,42 @@ const EditorPage = () => {
               scrollbar: {
                 vertical: "auto",
                 horizontal: "auto",
-                verticalScrollbarSize: 6,
-                horizontalScrollbarSize: 6,
+                verticalScrollbarSize: 8,
+                horizontalScrollbarSize: 8,
               },
               lineNumbers: "on",
               wordWrap: "on",
               automaticLayout: true,
               scrollBeyondLastLine: false,
-              padding: { top: 12, bottom: 12 },
-              renderWhitespace: "selection",
+              padding: { top: 8, bottom: 8 },
+              renderWhitespace: "none",
               bracketPairColorization: { enabled: true },
               smoothScrolling: true,
-              cursorBlinking: "expand",
-              cursorSmoothCaretAnimation: "on",
-              folding: true,
-              foldingHighlight: true,
+              cursorBlinking: "solid",
+              cursorSmoothCaretAnimation: "off",
+              folding: !isLargeFile,
+              foldingHighlight: false,
               showFoldingControls: "mouseover",
               matchBrackets: "always",
-              selectionHighlight: true,
-              occurrencesHighlight: "singleFile",
-              renderLineHighlight: "all",
+              selectionHighlight: false,
+              occurrencesHighlight: "off",
+              renderLineHighlight: "line",
               contextmenu: true,
-              quickSuggestions: activeTab?.language !== "text",
-              suggestOnTriggerCharacters: activeTab?.language !== "text",
+              quickSuggestions: false,
+              suggestOnTriggerCharacters: false,
+              wordBasedSuggestions: "off",
+              parameterHints: { enabled: false },
+              hover: { enabled: false },
+              links: false,
               tabSize: 2,
               insertSpaces: true,
               detectIndentation: true,
               trimAutoWhitespace: true,
               formatOnPaste: false,
               formatOnType: false,
-              // Performance optimizations for large files
               ...(isLargeFile && {
                 renderValidationDecorations: "off",
-                quickSuggestions: false,
-                suggestOnTriggerCharacters: false,
-                wordBasedSuggestions: "off",
-                parameterHints: { enabled: false },
                 folding: false,
-                renderWhitespace: "none",
               }),
             }}
             loading={

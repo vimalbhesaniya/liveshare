@@ -112,6 +112,28 @@ export function applyOpsToModel(
   }
 }
 
+/** Apply remote text with incremental edits; fall back to full replace only if needed. */
+export function applyRemoteCodeToModel(
+  model: editor.ITextModel,
+  remoteCode: string,
+): void {
+  const current = model.getValue();
+  if (current === remoteCode) return;
+
+  const ops = computeTextOps(current, remoteCode);
+  if (ops.length === 0) return;
+
+  const applied = applyOpsToModel(model, ops, current.length);
+  if (applied) return;
+
+  isApplyingRemoteOps = true;
+  try {
+    model.setValue(remoteCode);
+  } finally {
+    isApplyingRemoteOps = false;
+  }
+}
+
 /** Set while applying remote ops so onChange handlers can ignore echoes */
 let isApplyingRemoteOps = false;
 
