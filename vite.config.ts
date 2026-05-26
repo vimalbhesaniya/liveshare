@@ -28,14 +28,8 @@ export default defineConfig({
     },
   },
   build: {
-    // Optimize for production
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // esbuild minifies with far less memory than terser (Monaco workers OOM on CI)
+    minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks: {
@@ -44,9 +38,7 @@ export default defineConfig({
         },
       },
     },
-    // Improve chunk size
     chunkSizeWarningLimit: 1000,
-    // Source maps for production debugging (optional)
     sourcemap: false,
   },
   // Optimize dependencies

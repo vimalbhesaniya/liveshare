@@ -43,16 +43,8 @@ import {
   type TextOp,
 } from "@/lib/text-ops";
 import { throttle, debounce } from "@/lib/throttle";
-import {
-  saveDraft,
-  loadDraft,
-  clearDraft,
-  isDraftNewerThanServer,
-  type DraftRecord,
-} from "@/lib/draft-storage";
 import { stripTabsForBroadcast, mergeTabMeta, type TabMeta } from "@/lib/tab-meta";
 import { TabBar, Tab, createNewTab } from "@/components/TabBar";
-import { DraftRecoveryDialog } from "@/components/DraftRecoveryDialog";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
@@ -153,7 +145,7 @@ const EditorPage = () => {
     ops: TextOp[];
   } | null>(null);
   const serverLoadedAtRef = useRef(0);
-  const [pendingDraft, setPendingDraft] = useState<DraftRecord | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<any | null>(null);
   const [showDraftRecovery, setShowDraftRecovery] = useState(false);
   const [codeLength, setCodeLength] = useState(0);
 
@@ -513,9 +505,6 @@ const EditorPage = () => {
         setSnippetId(data.id);
         const loadedCode = data.code || "";
         lastSyncedCodeRef.current = loadedCode;
-        serverLoadedAtRef.current = Date.now();
-
-        const localDraft = await loadDraft(uniqueCode);
 
         // Try to parse tabs from stored data
         try {
@@ -523,17 +512,6 @@ const EditorPage = () => {
           if (parsed.tabs && Array.isArray(parsed.tabs)) {
             setTabs(parsed.tabs);
             setActiveTabId(parsed.activeTabId || parsed.tabs[0]?.id);
-            if (
-              localDraft &&
-              isDraftNewerThanServer(
-                localDraft,
-                loadedCode,
-                serverLoadedAtRef.current,
-              )
-            ) {
-              setPendingDraft(localDraft);
-              setShowDraftRecovery(true);
-            }
             // Handle password protection
             if (parsed.passwordHash) {
               setPasswordHash(parsed.passwordHash);
@@ -871,8 +849,6 @@ const EditorPage = () => {
 
       lastSyncedCodeRef.current = dataToSave;
       isDirtyRef.current = false;
-      await clearDraft(urlCode);
-      await saveDraft(urlCode, dataToSave, Date.now());
 
       socketRef.current?.emit("snippet:sync", {
         uniqueCode: urlCode,
@@ -898,17 +874,6 @@ const EditorPage = () => {
     lastSentCodeRef.current = dataToSave;
     isDirtyRef.current = false;
   }, [urlCode, buildSavePayload]);
-
-  // IndexedDB draft every 1s while editing
-  useEffect(() => {
-    if (!urlCode || isLoading) return;
-    const interval = setInterval(() => {
-      if (!isDirtyRef.current) return;
-      const payload = buildSavePayload(getTabsWithModelCode());
-      saveDraft(urlCode, payload).catch(() => {});
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [urlCode, isLoading, buildSavePayload, getTabsWithModelCode]);
 
   // Sync active tab model when switching tabs
   useEffect(() => {
@@ -1089,37 +1054,6 @@ const EditorPage = () => {
     setTabs(newTabs);
     broadcastTabsUpdate(newTabs, activeTabId);
     updateDatabase(newTabs);
-  };
-
-  const handleRestoreDraft = () => {
-    if (!pendingDraft || !urlCode) return;
-    try {
-      const parsed = JSON.parse(pendingDraft.payload);
-      if (parsed.tabs && Array.isArray(parsed.tabs)) {
-        modelsRef.current.forEach((m) => {
-          if (!m.isDisposed()) m.dispose();
-        });
-        modelsRef.current.clear();
-        syncBaseRef.current.clear();
-        setTabs(parsed.tabs);
-        setActiveTabId(parsed.activeTabId || parsed.tabs[0]?.id);
-        if (parsed.passwordHash) {
-          setPasswordHash(parsed.passwordHash);
-          setIsAuthenticated(false);
-        }
-        isDirtyRef.current = true;
-      }
-    } catch {
-      /* ignore */
-    }
-    setShowDraftRecovery(false);
-    setPendingDraft(null);
-  };
-
-  const handleDiscardDraft = async () => {
-    if (urlCode) await clearDraft(urlCode);
-    setShowDraftRecovery(false);
-    setPendingDraft(null);
   };
 
   // Tab management functions
@@ -1696,13 +1630,6 @@ const EditorPage = () => {
             }
           />
         </div>
-
-        <DraftRecoveryDialog
-          open={showDraftRecovery}
-          draftSavedAt={pendingDraft?.updatedAt ?? 0}
-          onRestore={handleRestoreDraft}
-          onDiscard={handleDiscardDraft}
-        />
       </div>
     </div>
   );
