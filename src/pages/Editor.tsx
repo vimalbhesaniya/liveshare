@@ -1156,9 +1156,9 @@ const EditorPage = () => {
     <div className="flex h-svh flex-col overflow-hidden bg-background">
       <Navigation />
 
-      <div className="container-fluid mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden px-2 sm:px-3 pb-2 pt-14 sm:pt-16">
+      <div className="container-fluid mx-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden px-2 sm:px-3 pb-1 pt-[4.75rem] sm:pt-20">
         {/* Header */}
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="mb-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
             <Select
               value={activeTab?.language || "javascript"}
@@ -1206,7 +1206,7 @@ const EditorPage = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-2.5 md:gap-3">
+          <div className="flex flex-wrap  items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
             {/* Font Size Controls - visible on mobile/tablet */}
             <div className="flex items-center gap-1 border border-border rounded-md p-0.5 lg:hidden">
               <Button
@@ -1295,7 +1295,7 @@ const EditorPage = () => {
         </div>
 
         {/* Code Editor */}
-        <div className="relative mt-1 min-h-0 flex-1 overflow-hidden rounded-lg border border-border shadow-lg">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-b-lg border border-t-0 border-border shadow-lg">
           {!snippetReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
               <div className="text-sm text-muted-foreground">
