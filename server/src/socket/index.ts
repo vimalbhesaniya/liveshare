@@ -92,12 +92,12 @@ export function registerSocketHandlers(io: Server) {
       "doc:ops",
       (payload: {
         uniqueCode: string;
-        tabId: string;
         senderId: string;
         baseLength: number;
         ops: unknown[];
+        code?: string;
       }) => {
-        if (!payload.uniqueCode || !payload.tabId) return;
+        if (!payload.uniqueCode || !payload.ops) return;
         socket.to(roomKey(payload.uniqueCode)).emit("doc:ops", payload);
       },
     );
@@ -106,29 +106,13 @@ export function registerSocketHandlers(io: Server) {
       "code:change",
       (payload: {
         uniqueCode: string;
-        tabId: string;
         code: string;
         senderId: string;
       }) => {
-        if (!payload.uniqueCode) return;
+        if (!payload.uniqueCode || payload.code === undefined) return;
         socket
           .to(roomKey(payload.uniqueCode))
           .emit("code:change", payload);
-      },
-    );
-
-    socket.on(
-      "tabs:update",
-      (payload: {
-        uniqueCode: string;
-        tabs: unknown[];
-        activeTabId: string;
-        senderId: string;
-      }) => {
-        if (!payload.uniqueCode) return;
-        socket
-          .to(roomKey(payload.uniqueCode))
-          .emit("tabs:update", payload);
       },
     );
 

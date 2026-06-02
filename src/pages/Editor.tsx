@@ -27,6 +27,10 @@ import {
   saveSnippetKeepalive,
 } from "@/lib/api";
 import { getRealtime, type RealtimeLike } from "@/lib/realtime";
+import {
+  parseSnippetStorage,
+  stringifySnippetPayload,
+} from "@/lib/snippet-payload";
 import { useTheme } from "next-themes";
 import "@/lib/monaco-setup";
 import Editor from "@monaco-editor/react";
@@ -40,8 +44,6 @@ import {
   type TextOp,
 } from "@/lib/text-ops";
 import { throttle, debounce } from "@/lib/throttle";
-import { stripTabsForBroadcast, mergeTabMeta, type TabMeta } from "@/lib/tab-meta";
-import { TabBar, Tab, createNewTab } from "@/components/TabBar";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
@@ -51,7 +53,6 @@ import {
 const SAVE_DEBOUNCE_MS = 3000;
 const DOC_OPS_THROTTLE_MS = 16;
 
-// Map our language names to Monaco language IDs
 const languageMap: Record<string, string> = {
   javascript: "javascript",
   typescript: "typescript",
@@ -78,6 +79,32 @@ const languageMap: Record<string, string> = {
   text: "plaintext",
 };
 
+const extMap: Record<string, string> = {
+  javascript: "js",
+  typescript: "ts",
+  python: "py",
+  java: "java",
+  cpp: "cpp",
+  csharp: "cs",
+  go: "go",
+  rust: "rs",
+  php: "php",
+  ruby: "rb",
+  swift: "swift",
+  kotlin: "kt",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  json: "json",
+  xml: "xml",
+  yaml: "yaml",
+  markdown: "md",
+  sql: "sql",
+  shell: "sh",
+  dockerfile: "dockerfile",
+  text: "txt",
+};
+
 type UserSelection = {
   userId: string;
   start: number;
@@ -89,16 +116,8 @@ const EditorPage = () => {
   const { t } = useTranslation();
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
-  const [tabs, setTabs] = useState<Tab[]>([
-    {
-      id: "initial",
-      name: "Tab 1",
-      color: "#3b82f6",
-      code: "",
-      language: "text",
-    },
-  ]);
-  const [activeTabId, setActiveTabId] = useState("initial");
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState("text");
   const [snippetId, setSnippetId] = useState<string | null>(null);
   const [snippetReady, setSnippetReady] = useState(false);
   const [passwordHash, setPasswordHash] = useState<string | null>(null);
@@ -112,8 +131,7 @@ const EditorPage = () => {
     return saved === "true";
   });
 
-  // Get app theme and map to Monaco theme
-  const { theme, resolvedTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const monacoTheme = resolvedTheme === "dark" ? "vs-dark" : "vs";
 
   const MIN_FONT_SIZE = 10;
@@ -125,41 +143,33 @@ const EditorPage = () => {
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const isRemoteUpdateRef = useRef(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const modelRef = useRef<editor.ITextModel | null>(null);
   const socketRef = useRef<RealtimeLike | null>(null);
-  const modelsRef = useRef<Map<string, editor.ITextModel>>(new Map());
-  const syncBaseRef = useRef<Map<string, string>>(new Map());
+  const syncBaseRef = useRef("");
   const pendingDocOpsRef = useRef<{
-    tabId: string;
     baseLength: number;
     ops: TextOp[];
     code: string;
   } | null>(null);
   const contentListenerDisposeRef = useRef<monaco.IDisposable | null>(null);
-  const onLocalEditRef = useRef<(code: string) => void>(() => {});
+  const onLocalEditRef = useRef<(value: string) => void>(() => {});
   const hasLocalEditsRef = useRef(false);
   const [codeLength, setCodeLength] = useState(0);
 
-  // Track last synced state for merging concurrent edits
   const lastSyncedCodeRef = useRef("");
   const lastSentCodeRef = useRef("");
   const isDirtyRef = useRef(false);
-  const tabsRef = useRef(tabs);
-  const activeTabIdRef = useRef(activeTabId);
+  const codeRef = useRef(code);
+  const languageRef = useRef(language);
   const passwordHashRef = useRef(passwordHash);
 
-  tabsRef.current = tabs;
-  activeTabIdRef.current = activeTabId;
+  codeRef.current = code;
+  languageRef.current = language;
   passwordHashRef.current = passwordHash;
 
-  // Get current active tab
-  const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-
-  // Performance: detect large content using character count (faster than line count)
-  // ~80 chars per line average, so 2000 lines ≈ 160,000 chars
   const LARGE_FILE_CHAR_THRESHOLD = 100000;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
 
-  // Font size handlers
   const increaseFontSize = useCallback(() => {
     setFontSize((prev) => {
       const newSize = Math.min(prev + 2, MAX_FONT_SIZE);
@@ -176,7 +186,6 @@ const EditorPage = () => {
     });
   }, []);
 
-  // Keyboard shortcuts for font size
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -189,21 +198,14 @@ const EditorPage = () => {
         }
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [increaseFontSize, decreaseFontSize]);
 
-  // Update editor font size when it changes
   useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.updateOptions({
-        fontSize: fontSize,
-      });
-    }
+    editorRef.current?.updateOptions({ fontSize });
   }, [fontSize]);
 
-  // Update editor theme when app theme changes
   useEffect(() => {
     if (editorRef.current && resolvedTheme) {
       monaco.editor.setTheme(monacoTheme);
@@ -213,69 +215,47 @@ const EditorPage = () => {
   const getModelLanguage = (lang: string) =>
     languageMap[lang] || "plaintext";
 
+  const getLiveCode = useCallback(() => {
+    const model = editorRef.current?.getModel() ?? modelRef.current;
+    return model && !model.isDisposed() ? model.getValue() : codeRef.current;
+  }, []);
+
   const getOrCreateModel = useCallback(
-    (tab: Tab): editor.ITextModel => {
-      const existing = modelsRef.current.get(tab.id);
-      if (existing && !existing.isDisposed()) {
-        return existing;
+    (initialCode: string, lang: string): editor.ITextModel => {
+      if (modelRef.current && !modelRef.current.isDisposed()) {
+        return modelRef.current;
       }
       const uri = monaco.Uri.parse(
-        `inmemory://liveshare/${urlCode ?? "local"}/${tab.id}`,
+        `inmemory://liveshare/${urlCode ?? "local"}/main`,
       );
       const model = monaco.editor.createModel(
-        tab.code,
-        getModelLanguage(tab.language),
+        initialCode,
+        getModelLanguage(lang),
         uri,
       );
-      modelsRef.current.set(tab.id, model);
-      syncBaseRef.current.set(tab.id, tab.code);
+      modelRef.current = model;
+      syncBaseRef.current = initialCode;
       return model;
     },
     [urlCode],
   );
 
-  const disposeModel = (tabId: string) => {
-    const model = modelsRef.current.get(tabId);
-    if (model && !model.isDisposed()) {
-      model.dispose();
-    }
-    modelsRef.current.delete(tabId);
-    syncBaseRef.current.delete(tabId);
-  };
-
-  /** Read live document text from Monaco models (editor model is source of truth). */
-  const getTabsWithModelCode = useCallback((): Tab[] => {
-    const activeId = activeTabIdRef.current;
-    const liveModel = editorRef.current?.getModel();
-
-    if (liveModel && activeId) {
-      modelsRef.current.set(activeId, liveModel);
-    }
-
-    return tabsRef.current.map((tab) => {
-      let code = tab.code;
-
-      if (tab.id === activeId && liveModel && !liveModel.isDisposed()) {
-        code = liveModel.getValue();
-      } else {
-        const model = modelsRef.current.get(tab.id);
-        if (model && !model.isDisposed()) {
-          code = model.getValue();
-        }
-      }
-
-      return { ...tab, code };
-    });
-  }, []);
-
-  const syncTabCodeFromModel = useCallback((tabId: string) => {
-    const model = modelsRef.current.get(tabId);
+  const applyRemoteCode = useCallback((remoteCode: string) => {
+    const model =
+      modelRef.current ??
+      (editorRef.current?.getModel() && !editorRef.current.getModel()!.isDisposed()
+        ? editorRef.current.getModel()!
+        : null);
     if (!model) return;
-    const code = model.getValue();
-    setTabs((prev) =>
-      prev.map((t) => (t.id === tabId ? { ...t, code } : t)),
-    );
-    syncBaseRef.current.set(tabId, code);
+
+    if (model.getValue() === remoteCode) return;
+    applyRemoteCodeToModel(model, remoteCode);
+    syncBaseRef.current = remoteCode;
+    setCode(remoteCode);
+    isRemoteUpdateRef.current = true;
+    setTimeout(() => {
+      isRemoteUpdateRef.current = false;
+    }, 0);
   }, []);
 
   const flushDocOps = useCallback(() => {
@@ -284,7 +264,6 @@ const EditorPage = () => {
     pendingDocOpsRef.current = null;
     socketRef.current.emit("doc:ops", {
       uniqueCode: urlCode,
-      tabId: pending.tabId,
       senderId: myUserId,
       baseLength: pending.baseLength,
       ops: pending.ops,
@@ -297,36 +276,37 @@ const EditorPage = () => {
   ).current;
 
   const queueDocOps = useCallback(
-    (tabId: string, baseLength: number, ops: TextOp[], code: string) => {
+    (baseLength: number, ops: TextOp[], snapshot: string) => {
       if (ops.length === 0) return;
       throttledFlushDocOps.flush();
-      pendingDocOpsRef.current = { tabId, baseLength, ops, code };
+      pendingDocOpsRef.current = { baseLength, ops, code: snapshot };
       throttledFlushDocOps();
     },
     [throttledFlushDocOps],
   );
 
-  // Generate random unique code
-  const generateUniqueCode = () => {
-    return Math.random().toString(36).substring(2, 10);
-  };
+  const emitCodeNow = useCallback(() => {
+    if (!urlCode || !socketRef.current) return;
+    socketRef.current.emit("code:change", {
+      uniqueCode: urlCode,
+      code: getLiveCode(),
+      senderId: myUserId,
+    });
+  }, [urlCode, myUserId, getLiveCode]);
 
-  // Broadcast tab metadata only (no code payloads)
-  const broadcastTabsUpdate = useCallback(
-    (newTabs: Tab[], newActiveTabId: string) => {
-      if (socketRef.current && urlCode) {
-        socketRef.current.emit("tabs:update", {
-          uniqueCode: urlCode,
-          tabs: stripTabsForBroadcast(newTabs),
-          activeTabId: newActiveTabId,
-          senderId: myUserId,
-        });
-      }
-    },
-    [myUserId, urlCode],
-  );
+  const throttledEmitCode = useRef(throttle(() => emitCodeNow(), 80)).current;
 
-  // Load or create code snippet
+  const generateUniqueCode = () =>
+    Math.random().toString(36).substring(2, 10);
+
+  const buildSavePayload = useCallback(() => {
+    return stringifySnippetPayload({
+      code: getLiveCode(),
+      language: languageRef.current,
+      passwordHash: passwordHashRef.current,
+    });
+  }, [getLiveCode]);
+
   useEffect(() => {
     const loadOrCreateSnippet = async () => {
       const uniqueCode = urlCode || generateUniqueCode();
@@ -351,64 +331,28 @@ const EditorPage = () => {
 
       if (data && status !== 404) {
         setSnippetId(data.id);
-        const loadedCode = data.code || "";
-        lastSyncedCodeRef.current = loadedCode;
-
-        // Try to parse tabs from stored data
-        try {
-          const parsed = JSON.parse(loadedCode);
-          if (parsed.tabs && Array.isArray(parsed.tabs)) {
-            setTabs(parsed.tabs);
-            setActiveTabId(parsed.activeTabId || parsed.tabs[0]?.id);
-            // Handle password protection
-            if (parsed.passwordHash) {
-              setPasswordHash(parsed.passwordHash);
-              setIsAuthenticated(false);
-            } else {
-              setIsAuthenticated(true);
-            }
-          } else {
-            // Legacy format - single code
-            setTabs([
-              {
-                id: "initial",
-                name: "Tab 1",
-                color: "#3b82f6",
-                code: loadedCode,
-                language: data.language || "text",
-              },
-            ]);
-            setIsAuthenticated(true);
-          }
-        } catch {
-          // Not JSON - legacy format
-          setTabs([
-            {
-              id: "initial",
-              name: "Tab 1",
-              color: "#3b82f6",
-              code: loadedCode,
-              language: data.language || "text",
-            },
-          ]);
+        const loaded = data.code || "";
+        lastSyncedCodeRef.current = loaded;
+        const payload = parseSnippetStorage(loaded, data.language || "text");
+        setCode(payload.code);
+        setLanguage(payload.language);
+        syncBaseRef.current = payload.code;
+        if (payload.passwordHash) {
+          setPasswordHash(payload.passwordHash);
+          setIsAuthenticated(false);
+        } else {
           setIsAuthenticated(true);
         }
       } else {
-        const initialTab = {
-          id: "initial",
-          name: "Tab 1",
-          color: "#3b82f6",
-          code: t("editor.welcomeComment"),
+        const welcome = t("editor.welcomeComment");
+        const payload = stringifySnippetPayload({
+          code: welcome,
           language: "text",
-        };
-
+          passwordHash: null,
+        });
         const { data: newSnippet, error: insertError } = await createSnippet(
           uniqueCode,
-          JSON.stringify({
-            tabs: [initialTab],
-            activeTabId: "initial",
-            passwordHash: null,
-          }),
+          payload,
           "text",
         );
 
@@ -421,8 +365,9 @@ const EditorPage = () => {
           });
         } else if (newSnippet) {
           setSnippetId(newSnippet.id);
-          setTabs([initialTab]);
-          setActiveTabId("initial");
+          setCode(welcome);
+          setLanguage("text");
+          syncBaseRef.current = welcome;
           setIsAuthenticated(true);
         }
       }
@@ -433,7 +378,6 @@ const EditorPage = () => {
     loadOrCreateSnippet();
   }, [urlCode, navigate, toast, t]);
 
-  // Set up realtime (AWS WebSocket or Socket.io locally)
   useEffect(() => {
     if (!urlCode) return;
 
@@ -441,7 +385,7 @@ const EditorPage = () => {
     socketRef.current = socket;
 
     const handleSnippetUpdated = ({
-      code: remoteCode,
+      code: remoteRaw,
       senderId,
     }: {
       code: string;
@@ -449,75 +393,29 @@ const EditorPage = () => {
     }) => {
       if (senderId === myUserId) return;
       if (hasLocalEditsRef.current) return;
-
-      if (remoteCode === lastSentCodeRef.current) {
-        lastSyncedCodeRef.current = remoteCode;
+      if (remoteRaw === lastSentCodeRef.current) {
+        lastSyncedCodeRef.current = remoteRaw;
         return;
       }
 
-      try {
-        const parsed = JSON.parse(remoteCode);
-        if (!parsed.tabs || !Array.isArray(parsed.tabs)) return;
-
-        parsed.tabs.forEach((remoteTab: Tab) => {
-          const tab =
-            tabsRef.current.find((t) => t.id === remoteTab.id) ?? remoteTab;
-          const model = modelsRef.current.get(remoteTab.id) ?? getOrCreateModel(tab);
-          if (model.getValue() !== remoteTab.code) {
-            applyRemoteCodeToModel(model, remoteTab.code);
-            syncBaseRef.current.set(remoteTab.id, remoteTab.code);
-          }
-        });
-
-        setTabs((currentTabs) => {
-          const remoteTabMap = new Map(
-            (parsed.tabs as Tab[]).map((t) => [t.id, t]),
-          );
-          return currentTabs.map((tab) => {
-            const remoteTab = remoteTabMap.get(tab.id);
-            return remoteTab ? { ...tab, ...remoteTab } : tab;
-          });
-        });
-
-        if (parsed.activeTabId) {
-          setActiveTabId(parsed.activeTabId);
-        }
-        if (parsed.passwordHash) {
-          setPasswordHash(parsed.passwordHash);
-        }
-      } catch {
-        // Legacy format handling
+      const payload = parseSnippetStorage(
+        remoteRaw,
+        languageRef.current,
+      );
+      applyRemoteCode(payload.code);
+      setLanguage(payload.language);
+      if (payload.passwordHash) {
+        setPasswordHash(payload.passwordHash);
       }
-
-      lastSyncedCodeRef.current = remoteCode;
-    };
-
-    const handleTabsUpdate = ({
-      tabs: remoteTabs,
-      senderId,
-    }: {
-      tabs: TabMeta[];
-      senderId: string;
-    }) => {
-      if (senderId === myUserId) return;
-
-      setTabs((currentTabs) => {
-        const getCode = (tabId: string) =>
-          modelsRef.current.get(tabId)?.getValue() ??
-          currentTabs.find((t) => t.id === tabId)?.code ??
-          "";
-        return mergeTabMeta(currentTabs, remoteTabs, getCode);
-      });
+      lastSyncedCodeRef.current = remoteRaw;
     };
 
     const handleDocOps = ({
-      tabId,
       senderId,
       baseLength,
       ops,
-      code,
+      code: snapshot,
     }: {
-      tabId: string;
       senderId: string;
       baseLength: number;
       ops: TextOp[];
@@ -525,54 +423,37 @@ const EditorPage = () => {
     }) => {
       if (senderId === myUserId) return;
 
-      const tab = tabsRef.current.find((t) => t.id === tabId);
-      if (!tab) return;
+      const model =
+        modelRef.current ??
+        (editorRef.current?.getModel() ?? getOrCreateModel(codeRef.current, languageRef.current));
 
-      const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
       let applied = applyOpsToModel(model, ops, baseLength);
 
-      if (!applied && code !== undefined) {
-        applyRemoteCodeToModel(model, code);
-        applied = true;
+      if (!applied && snapshot !== undefined) {
+        applyRemoteCode(snapshot);
+        return;
       }
 
       if (applied) {
-        syncBaseRef.current.set(tabId, model.getValue());
-        if (tabId === activeTabIdRef.current) {
-          isRemoteUpdateRef.current = true;
-          setTimeout(() => {
-            isRemoteUpdateRef.current = false;
-          }, 0);
-        }
-      }
-    };
-
-    /** Legacy clients may still send full document replaces */
-    const handleCodeChange = ({
-      tabId,
-      code,
-      senderId,
-    }: {
-      tabId: string;
-      code: string;
-      senderId: string;
-    }) => {
-      if (senderId === myUserId) return;
-
-      const tab = tabsRef.current.find((t) => t.id === tabId);
-      if (!tab) return;
-
-      const model = modelsRef.current.get(tabId) ?? getOrCreateModel(tab);
-      if (model.getValue() === code) return;
-
-      applyRemoteCodeToModel(model, code);
-      syncBaseRef.current.set(tabId, code);
-      if (tabId === activeTabIdRef.current) {
+        const value = model.getValue();
+        syncBaseRef.current = value;
+        setCode(value);
         isRemoteUpdateRef.current = true;
         setTimeout(() => {
           isRemoteUpdateRef.current = false;
         }, 0);
       }
+    };
+
+    const handleCodeChange = ({
+      code: remoteCode,
+      senderId,
+    }: {
+      code: string;
+      senderId: string;
+    }) => {
+      if (senderId === myUserId) return;
+      applyRemoteCode(remoteCode);
     };
 
     const handlePresenceSync = ({
@@ -582,8 +463,7 @@ const EditorPage = () => {
       count: number;
       selections: UserSelection[];
     }) => {
-      const others = selections.filter((s) => s.userId !== myUserId);
-      setUserSelections(others);
+      setUserSelections(selections.filter((s) => s.userId !== myUserId));
       setActiveUserCount(count);
     };
 
@@ -593,7 +473,6 @@ const EditorPage = () => {
 
     socket.on("connect", joinRoom);
     socket.on("snippet:updated", handleSnippetUpdated);
-    socket.on("tabs:update", handleTabsUpdate);
     socket.on("doc:ops", handleDocOps);
     socket.on("code:change", handleCodeChange);
     socket.on("presence:sync", handlePresenceSync);
@@ -606,12 +485,13 @@ const EditorPage = () => {
       socket.emit("room:leave", { uniqueCode: urlCode });
       socket.off("connect", joinRoom);
       socket.off("snippet:updated", handleSnippetUpdated);
-      socket.off("tabs:update", handleTabsUpdate);
       socket.off("doc:ops", handleDocOps);
       socket.off("code:change", handleCodeChange);
       socket.off("presence:sync", handlePresenceSync);
       throttledFlushDocOps.flush();
       throttledFlushDocOps.cancel();
+      throttledEmitCode.flush();
+      throttledEmitCode.cancel();
       contentListenerDisposeRef.current?.dispose();
       contentListenerDisposeRef.current = null;
     };
@@ -619,105 +499,73 @@ const EditorPage = () => {
     urlCode,
     myUserId,
     getOrCreateModel,
+    applyRemoteCode,
     throttledFlushDocOps,
+    throttledEmitCode,
+    emitCodeNow,
   ]);
 
-  const buildSavePayload = useCallback(
-    (metaOverride?: Tab[]) => {
-      const withCode = getTabsWithModelCode();
-      const tabsToSave = metaOverride
-        ? withCode.map((tab) => {
-            const meta = metaOverride.find((m) => m.id === tab.id);
-            return meta ? { ...tab, ...meta, code: tab.code } : tab;
-          })
-        : withCode;
-      return JSON.stringify({
-        tabs: tabsToSave,
-        activeTabId: activeTabIdRef.current,
-        passwordHash: passwordHashRef.current,
+  const updateDatabase = useCallback(async () => {
+    if (!urlCode) return;
+
+    const dataToSave = buildSavePayload();
+    lastSentCodeRef.current = dataToSave;
+
+    const { error } = await updateSnippet(
+      urlCode,
+      dataToSave,
+      languageRef.current,
+    );
+    if (error) {
+      console.error("Error updating snippet:", error);
+      toast({
+        title: t("editor.errorTitle"),
+        description: t("editor.errorSaveSnippet"),
+        variant: "destructive",
       });
-    },
-    [getTabsWithModelCode],
-  );
+      return;
+    }
 
-  // Persist to MongoDB (REST) and notify other users (WebSocket)
-  const updateDatabase = useCallback(
-    async (metaOverride?: Tab[]) => {
-      if (!urlCode) return;
-
-      const tabsToSave = getTabsWithModelCode();
-      const lang =
-        (metaOverride?.find((t) => t.id === activeTabIdRef.current)?.language ??
-          tabsToSave.find((t) => t.id === activeTabIdRef.current)?.language) ||
-        "text";
-      const dataToSave = buildSavePayload(metaOverride);
-      lastSentCodeRef.current = dataToSave;
-
-      const { error } = await updateSnippet(urlCode, dataToSave, lang);
-      if (error) {
-        console.error("Error updating snippet:", error);
-        toast({
-          title: t("editor.errorTitle"),
-          description: t("editor.errorSaveSnippet"),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      lastSyncedCodeRef.current = dataToSave;
-      isDirtyRef.current = false;
-    },
-    [urlCode, myUserId, buildSavePayload, getTabsWithModelCode, toast, t],
-  );
+    lastSyncedCodeRef.current = dataToSave;
+    isDirtyRef.current = false;
+  }, [urlCode, buildSavePayload, toast, t]);
 
   const flushSave = useCallback(() => {
     if (!urlCode) return;
     throttledFlushDocOps.flush();
+    throttledEmitCode.flush();
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = undefined;
     }
     if (!isDirtyRef.current) return;
     const dataToSave = buildSavePayload();
-    const lang =
-      tabsRef.current.find((t) => t.id === activeTabIdRef.current)?.language ||
-      "text";
-    saveSnippetKeepalive(urlCode, dataToSave, lang);
+    saveSnippetKeepalive(urlCode, dataToSave, languageRef.current);
     lastSentCodeRef.current = dataToSave;
     isDirtyRef.current = false;
-  }, [urlCode, buildSavePayload]);
+  }, [urlCode, buildSavePayload, throttledFlushDocOps, throttledEmitCode]);
 
-  // Sync active tab model when switching tabs
   useEffect(() => {
     if (!snippetReady || !editorRef.current) return;
-    const tab = tabs.find((t) => t.id === activeTabId);
-    if (!tab) return;
-    const model = getOrCreateModel(tab);
+    const model = getOrCreateModel(codeRef.current, languageRef.current);
+    monaco.editor.setModelLanguage(model, getModelLanguage(language));
     if (editorRef.current.getModel() !== model) {
       editorRef.current.setModel(model);
     }
-    modelsRef.current.set(tab.id, model);
-    syncBaseRef.current.set(tab.id, model.getValue());
+    syncBaseRef.current = model.getValue();
     setCodeLength(model.getValue().length);
-  }, [activeTabId, snippetReady, tabs, getOrCreateModel]);
+  }, [snippetReady, language, getOrCreateModel]);
 
-  // Hydrate Monaco models once snippet data arrives
   useEffect(() => {
     if (!snippetReady || hasLocalEditsRef.current) return;
+    const model = modelRef.current ?? getOrCreateModel(code, language);
+    if (model.getValue() !== code) {
+      applyRemoteCodeToModel(model, code);
+      syncBaseRef.current = code;
+    }
+    setCodeLength(model.getValue().length);
+  }, [snippetReady, code, language, getOrCreateModel]);
 
-    tabsRef.current.forEach((tab) => {
-      const model = modelsRef.current.get(tab.id) ?? getOrCreateModel(tab);
-      if (model.getValue() !== tab.code) {
-        applyRemoteCodeToModel(model, tab.code);
-        syncBaseRef.current.set(tab.id, tab.code);
-      }
-    });
-    setCodeLength(
-      modelsRef.current.get(activeTabIdRef.current)?.getValue().length ?? 0,
-    );
-  }, [snippetReady, getOrCreateModel]);
-
-  // Save when leaving the page
   useEffect(() => {
     const onLeave = () => flushSave();
     window.addEventListener("beforeunload", onLeave);
@@ -728,7 +576,6 @@ const EditorPage = () => {
     };
   }, [flushSave]);
 
-  // Backup autosave every 30s while editing
   useEffect(() => {
     if (!urlCode) return;
     const interval = setInterval(() => {
@@ -739,68 +586,42 @@ const EditorPage = () => {
     return () => clearInterval(interval);
   }, [urlCode, updateDatabase]);
 
-  // Flush save when leaving the editor room
   useEffect(() => {
     return () => {
       flushSave();
     };
   }, [urlCode, flushSave]);
 
-  // Handle password setting/removal
   const handleSetPassword = (password: string | null) => {
-    if (password) {
-      const hash = hashPassword(password);
-      setPasswordHash(hash);
-      // Save immediately with password
-      const dataToSave = JSON.stringify({
-        tabs: tabs,
-        activeTabId: activeTabId,
-        passwordHash: hash,
-      });
-      lastSentCodeRef.current = dataToSave;
-      updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
-        ({ error }) => {
-          if (!error) {
-            socketRef.current?.emit("snippet:sync", {
-              uniqueCode: urlCode,
-              code: dataToSave,
-              senderId: myUserId,
-            });
-            toast({
-              title: t("editor.codeProtectedTitle"),
-              description: t("editor.codeProtectedDesc"),
-            });
-          }
-        },
-      );
-    } else {
-      setPasswordHash(null);
-      // Save immediately without password
-      const dataToSave = JSON.stringify({
-        tabs: tabs,
-        activeTabId: activeTabId,
-        passwordHash: null,
-      });
-      lastSentCodeRef.current = dataToSave;
-      updateSnippet(urlCode!, dataToSave, activeTab?.language || "text").then(
-        ({ error }) => {
-          if (!error) {
-            socketRef.current?.emit("snippet:sync", {
-              uniqueCode: urlCode,
-              code: dataToSave,
-              senderId: myUserId,
-            });
-            toast({
-              title: t("editor.protectionRemovedTitle"),
-              description: t("editor.protectionRemovedDesc"),
-            });
-          }
-        },
-      );
-    }
+    const hash = password ? hashPassword(password) : null;
+    setPasswordHash(hash);
+    const dataToSave = stringifySnippetPayload({
+      code: getLiveCode(),
+      language: languageRef.current,
+      passwordHash: hash,
+    });
+    lastSentCodeRef.current = dataToSave;
+    updateSnippet(urlCode!, dataToSave, languageRef.current).then(
+      ({ error }) => {
+        if (!error) {
+          socketRef.current?.emit("snippet:sync", {
+            uniqueCode: urlCode,
+            code: dataToSave,
+            senderId: myUserId,
+          });
+          toast({
+            title: password
+              ? t("editor.codeProtectedTitle")
+              : t("editor.protectionRemovedTitle"),
+            description: password
+              ? t("editor.codeProtectedDesc")
+              : t("editor.protectionRemovedDesc"),
+          });
+        }
+      },
+    );
   };
 
-  // Handle password verification
   const handlePasswordSubmit = (password: string): boolean => {
     const hash = hashPassword(password);
     if (hash === passwordHash) {
@@ -814,16 +635,10 @@ const EditorPage = () => {
     debounce((len: number) => setCodeLength(len), 200),
   ).current;
 
-  const handleCodeChange = (newCode: string) => {
+  const handleLocalCodeChange = (newCode: string) => {
     if (getIsApplyingRemoteOps()) return;
 
-    const tabId = activeTabIdRef.current;
-    const liveModel = editorRef.current?.getModel();
-    if (liveModel && tabId) {
-      modelsRef.current.set(tabId, liveModel);
-    }
-
-    const syncBase = syncBaseRef.current.get(tabId) ?? "";
+    const syncBase = syncBaseRef.current;
 
     if (isRemoteUpdateRef.current && newCode === syncBase) {
       isRemoteUpdateRef.current = false;
@@ -837,9 +652,10 @@ const EditorPage = () => {
     isDirtyRef.current = true;
 
     const ops = computeTextOps(syncBase, newCode);
-    const baseLength = syncBase.length;
-    syncBaseRef.current.set(tabId, newCode);
-    queueDocOps(tabId, baseLength, ops, newCode);
+    syncBaseRef.current = newCode;
+    setCode(newCode);
+    queueDocOps(syncBase.length, ops, newCode);
+    throttledEmitCode();
 
     debouncedSizeCheck(newCode.length);
 
@@ -848,84 +664,23 @@ const EditorPage = () => {
     }
     updateTimeoutRef.current = setTimeout(() => {
       throttledFlushDocOps.flush();
+      throttledEmitCode.flush();
       updateDatabase();
     }, SAVE_DEBOUNCE_MS);
   };
-  onLocalEditRef.current = handleCodeChange;
+  onLocalEditRef.current = handleLocalCodeChange;
 
   const handleLanguageChange = (newLanguage: string) => {
-    const model = modelsRef.current.get(activeTabId);
+    const model = modelRef.current ?? editorRef.current?.getModel();
     if (model) {
       monaco.editor.setModelLanguage(model, getModelLanguage(newLanguage));
     }
-    const newTabs = tabs.map((tab) =>
-      tab.id === activeTabId ? { ...tab, language: newLanguage } : tab,
-    );
-    setTabs(newTabs);
-    broadcastTabsUpdate(newTabs, activeTabId);
-    updateDatabase(newTabs);
-  };
-
-  // Tab management functions
-  const handleTabSelect = (tabId: string) => {
-    syncTabCodeFromModel(activeTabId);
-    setActiveTabId(tabId);
-  };
-
-  const handleTabAdd = () => {
-    const newTab = createNewTab(tabs.length + 1);
-    getOrCreateModel(newTab);
-    const newTabs = [...tabs, newTab];
-    setTabs(newTabs);
-    setActiveTabId(newTab.id);
+    setLanguage(newLanguage);
+    languageRef.current = newLanguage;
     isDirtyRef.current = true;
-    broadcastTabsUpdate(newTabs, newTab.id);
-    updateDatabase(newTabs);
+    void updateDatabase();
   };
 
-  const handleTabClose = (tabId: string) => {
-    if (tabs.length <= 1) return;
-
-    const tabIndex = tabs.findIndex((t) => t.id === tabId);
-    const newTabs = tabs.filter((t) => t.id !== tabId);
-
-    let newActiveTabId = activeTabId;
-    if (activeTabId === tabId) {
-      newActiveTabId = newTabs[Math.max(0, tabIndex - 1)]?.id || newTabs[0].id;
-    }
-
-    disposeModel(tabId);
-    setTabs(newTabs);
-    setActiveTabId(newActiveTabId);
-    broadcastTabsUpdate(newTabs, newActiveTabId);
-    updateDatabase(newTabs);
-  };
-
-  const handleTabRename = (tabId: string, newName: string) => {
-    const newTabs = tabs.map((tab) =>
-      tab.id === tabId ? { ...tab, name: newName } : tab,
-    );
-    setTabs(newTabs);
-    broadcastTabsUpdate(newTabs, activeTabId);
-    updateDatabase(newTabs);
-  };
-
-  const handleTabColorChange = (tabId: string, newColor: string) => {
-    const newTabs = tabs.map((tab) =>
-      tab.id === tabId ? { ...tab, color: newColor } : tab,
-    );
-    setTabs(newTabs);
-    broadcastTabsUpdate(newTabs, activeTabId);
-    updateDatabase(newTabs);
-  };
-
-  const handleTabsReorder = (newTabs: Tab[]) => {
-    setTabs(newTabs);
-    broadcastTabsUpdate(newTabs, activeTabId);
-    updateDatabase(newTabs);
-  };
-
-  // Store a consistent color for this user's selection
   const [mySelectionColor] = useState(
     () => `hsl(${Math.random() * 360}, 70%, 60%)`,
   );
@@ -943,25 +698,18 @@ const EditorPage = () => {
     ),
   ).current;
 
-  // Handle Monaco editor mount
   const handleEditorMount = (editorInstance: editor.IStandaloneCodeEditor) => {
     editorRef.current = editorInstance;
 
-    const tab =
-      tabsRef.current.find((t) => t.id === activeTabIdRef.current) ??
-      tabsRef.current[0];
-    if (tab) {
-      let model = editorInstance.getModel();
-      if (!model || model.isDisposed()) {
-        model = getOrCreateModel(tab);
-        editorInstance.setModel(model);
-      } else {
-        // Reuse model created by @monaco-editor/react; keep ref in sync
-        modelsRef.current.set(tab.id, model);
-        syncBaseRef.current.set(tab.id, model.getValue());
-      }
-      setCodeLength(model.getValue().length);
+    let model = editorInstance.getModel();
+    if (!model || model.isDisposed()) {
+      model = getOrCreateModel(codeRef.current, languageRef.current);
+      editorInstance.setModel(model);
+    } else {
+      modelRef.current = model;
+      syncBaseRef.current = model.getValue();
     }
+    setCodeLength(model.getValue().length);
 
     contentListenerDisposeRef.current?.dispose();
     contentListenerDisposeRef.current =
@@ -982,11 +730,11 @@ const EditorPage = () => {
       if (!urlCode || !socketRef.current) return;
 
       const selection = e.selection;
-      const model = editorInstance.getModel();
-      if (!model) return;
+      const m = editorInstance.getModel();
+      if (!m) return;
 
-      const start = model.getOffsetAt(selection.getStartPosition());
-      const end = model.getOffsetAt(selection.getEndPosition());
+      const start = m.getOffsetAt(selection.getStartPosition());
+      const end = m.getOffsetAt(selection.getEndPosition());
 
       if (start !== end) {
         emitSelectionChange({
@@ -1009,15 +757,13 @@ const EditorPage = () => {
     });
   };
 
-  // Update Monaco decorations when user selections change
   useEffect(() => {
-    if (!editorRef.current || !activeTab) return;
+    if (!editorRef.current) return;
 
-    const editor = editorRef.current;
-    const model = editor.getModel();
+    const ed = editorRef.current;
+    const model = ed.getModel();
     if (!model) return;
 
-    // Create decorations for each user's selection
     const decorations: monaco.editor.IModelDeltaDecoration[] = [];
 
     userSelections.forEach((selection) => {
@@ -1026,13 +772,10 @@ const EditorPage = () => {
       try {
         const startPos = model.getPositionAt(selection.start);
         const endPos = model.getPositionAt(selection.end);
-
-        // Create a consistent CSS class based on user ID
         const userIndex =
           selection.userId
             .split("")
             .reduce((acc, char) => acc + char.charCodeAt(0), 0) % 10;
-        const userColorClass = `remote-selection-user-${userIndex}`;
 
         decorations.push({
           range: new monaco.Range(
@@ -1043,7 +786,7 @@ const EditorPage = () => {
           ),
           options: {
             className: "remote-user-selection",
-            inlineClassName: userColorClass,
+            inlineClassName: `remote-selection-user-${userIndex}`,
             stickiness:
               monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
@@ -1053,20 +796,14 @@ const EditorPage = () => {
       }
     });
 
-    // Apply decorations to the editor
-    const decorationIds = editor.deltaDecorations([], decorations);
-
-    // Clean up decorations on unmount or when selections change
+    const decorationIds = ed.deltaDecorations([], decorations);
     return () => {
-      if (editorRef.current) {
-        editorRef.current.deltaDecorations(decorationIds, []);
-      }
+      editorRef.current?.deltaDecorations(decorationIds, []);
     };
-  }, [userSelections, activeTab]);
+  }, [userSelections]);
 
   const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(window.location.href);
     toast({
       title: t("editor.linkCopiedTitle"),
       description: t("editor.linkCopiedDesc"),
@@ -1074,11 +811,7 @@ const EditorPage = () => {
   };
 
   const handleCopy = () => {
-    const code =
-      modelsRef.current.get(activeTabId)?.getValue() ??
-      activeTab?.code ??
-      "";
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(getLiveCode());
     toast({
       title: t("editor.codeCopiedTitle"),
       description: t("editor.codeCopiedDesc"),
@@ -1086,52 +819,21 @@ const EditorPage = () => {
   };
 
   const handleDownload = () => {
-    const code =
-      modelsRef.current.get(activeTabId)?.getValue() ??
-      activeTab?.code ??
-      "";
-    const blob = new Blob([code], { type: "text/plain" });
+    const text = getLiveCode();
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-
-    // Map language to file extension
-    const extMap: Record<string, string> = {
-      javascript: "js",
-      typescript: "ts",
-      python: "py",
-      java: "java",
-      cpp: "cpp",
-      csharp: "cs",
-      go: "go",
-      rust: "rs",
-      php: "php",
-      ruby: "rb",
-      swift: "swift",
-      kotlin: "kt",
-      html: "html",
-      css: "css",
-      scss: "scss",
-      json: "json",
-      xml: "xml",
-      yaml: "yaml",
-      markdown: "md",
-      sql: "sql",
-      shell: "sh",
-      dockerfile: "dockerfile",
-      text: "txt",
-    };
-
-    const ext = extMap[activeTab?.language || "text"] || "txt";
-    a.download = `${activeTab?.name || "code"}.${ext}`;
+    const ext = extMap[language] || "txt";
+    a.download = `snippet.${ext}`;
     a.click();
+    URL.revokeObjectURL(url);
     toast({
       title: t("editor.downloadedTitle"),
       description: t("editor.downloadedDesc"),
     });
   };
 
-  // Lock page scroll — only the editor pane should scroll
   useEffect(() => {
     const prevBody = document.body.style.overflow;
     const prevHtml = document.documentElement.style.overflow;
@@ -1157,13 +859,9 @@ const EditorPage = () => {
       <Navigation />
 
       <div className="container-fluid mx-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden px-2 sm:px-3 pb-1 pt-[4.75rem] sm:pt-20">
-        {/* Header */}
         <div className="mb-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
-            <Select
-              value={activeTab?.language || "javascript"}
-              onValueChange={handleLanguageChange}
-            >
+            <Select value={language} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[130px] sm:w-[160px] md:w-[200px]">
                 <SelectValue placeholder={t("editor.language")} />
               </SelectTrigger>
@@ -1194,20 +892,23 @@ const EditorPage = () => {
               </SelectContent>
             </Select>
 
-            {/* Live Collaborator Count */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-primary text-sm font-medium">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
               <Users className="w-4 h-4" />
               <span className="hidden md:inline">
-                {activeUserCount} {activeUserCount !== 1 ? t("editor.developers") : t("editor.developer")}{" "}
+                {activeUserCount}{" "}
+                {activeUserCount !== 1
+                  ? t("editor.developers")
+                  : t("editor.developer")}{" "}
                 {t("editor.collaborating")}
               </span>
-              <span className="md:hidden">{activeUserCount} {t("editor.live")}</span>
+              <span className="md:hidden">
+                {activeUserCount} {t("editor.live")}
+              </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap  items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
-            {/* Font Size Controls - visible on mobile/tablet */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3 justify-end">
             <div className="flex items-center gap-1 border border-border rounded-md p-0.5 lg:hidden">
               <Button
                 variant="ghost"
@@ -1232,7 +933,6 @@ const EditorPage = () => {
               </Button>
             </div>
 
-            {/* Minimap Toggle */}
             <Button
               variant={showMinimap ? "default" : "outline"}
               size="sm"
@@ -1244,7 +944,9 @@ const EditorPage = () => {
                 });
               }}
               className="px-2 sm:px-3"
-              title={showMinimap ? t("editor.hideMinimap") : t("editor.showMinimap")}
+              title={
+                showMinimap ? t("editor.hideMinimap") : t("editor.showMinimap")
+              }
             >
               <MapIcon className="h-4 w-4" />
               <span className="hidden lg:inline ml-2">{t("editor.minimap")}</span>
@@ -1280,22 +982,7 @@ const EditorPage = () => {
           </div>
         </div>
 
-        {/* Tab Bar */}
-        <div className="shrink-0">
-          <TabBar
-            tabs={tabs}
-            activeTabId={activeTabId}
-            onTabSelect={handleTabSelect}
-            onTabAdd={handleTabAdd}
-            onTabClose={handleTabClose}
-            onTabRename={handleTabRename}
-            onTabColorChange={handleTabColorChange}
-            onTabsReorder={handleTabsReorder}
-          />
-        </div>
-
-        {/* Code Editor */}
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-b-lg border border-t-0 border-border shadow-lg">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border shadow-lg">
           {!snippetReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
               <div className="text-sm text-muted-foreground">
@@ -1305,10 +992,8 @@ const EditorPage = () => {
           )}
           <Editor
             height="100%"
-            language={
-              languageMap[activeTab?.language || "javascript"] || "plaintext"
-            }
-            defaultValue={activeTab?.code || ""}
+            language={languageMap[language] || "plaintext"}
+            defaultValue={code}
             onMount={handleEditorMount}
             keepCurrentModel={true}
             theme={monacoTheme}
@@ -1360,7 +1045,9 @@ const EditorPage = () => {
             }}
             loading={
               <div className="flex items-center justify-center h-full bg-slate-800">
-                <div className="text-muted-foreground">{t("editor.loadingEditor")}</div>
+                <div className="text-muted-foreground">
+                  {t("editor.loadingEditor")}
+                </div>
               </div>
             }
           />

@@ -64,17 +64,17 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "doc:ops": {
-      if (!body.uniqueCode || !body.tabId || !body.ops) break;
+      if (!body.uniqueCode || !body.ops) break;
       await broadcastToRoom(
         endpoint,
         body.uniqueCode,
         {
           event: "doc:ops",
           uniqueCode: body.uniqueCode,
-          tabId: body.tabId,
           senderId: body.senderId,
           baseLength: body.baseLength ?? 0,
           ops: body.ops,
+          code: body.code,
         },
         connectionId,
       );
@@ -82,22 +82,16 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "code:change": {
-      if (!body.uniqueCode) break;
+      if (!body.uniqueCode || body.code === undefined) break;
       await broadcastToRoom(
         endpoint,
         body.uniqueCode,
-        { event: "code:change", ...body },
-        connectionId,
-      );
-      break;
-    }
-
-    case "tabs:update": {
-      if (!body.uniqueCode) break;
-      await broadcastToRoom(
-        endpoint,
-        body.uniqueCode,
-        { event: "tabs:update", ...body },
+        {
+          event: "code:change",
+          uniqueCode: body.uniqueCode,
+          code: body.code,
+          senderId: body.senderId,
+        },
         connectionId,
       );
       break;
