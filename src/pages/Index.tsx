@@ -18,11 +18,21 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageSeo } from "@/hooks/use-page-seo";
 
 const Index = () => {
   const navigateToRandomEditor = useNavigateToRandomEditor();
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const { t } = useTranslation();
+
+  // Restore indexable homepage meta after leaving /:code rooms (noindex)
+  usePageSeo({
+    title:
+      "LiveShare - Share code in real-time with developers in your browser",
+    canonicalPath: "/",
+    robots:
+      "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+  });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -469,7 +479,7 @@ const Index = () => {
               <button onClick={navigateToRandomEditor} className="hover:text-foreground transition-colors">{t("footer.liveShareCode")}</button>
               <a href="#how-it-works" className="hover:text-foreground transition-colors">{t("footer.howToLiveShare")}</a>
               <a href="#features" className="hover:text-foreground transition-colors">{t("footer.features")}</a>
-              <a href="https://liveshare.dev" className="hover:text-foreground transition-colors">{t("footer.liveShareDev")}</a>
+              <a href="https://www.liveshare.dev/" className="hover:text-foreground transition-colors">{t("footer.liveShareDev")}</a>
             </nav>
             <p className="text-xs mt-4">{t("footer.copyright")}</p>
           </div>

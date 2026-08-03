@@ -1,10 +1,18 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageSeo } from "@/hooks/use-page-seo";
 
 const NotFound = () => {
   const location = useLocation();
   const { t } = useTranslation();
+
+  usePageSeo({
+    title: "Page not found - LiveShare",
+    description: "The page you are looking for does not exist on LiveShare.",
+    canonicalPath: location.pathname || "/",
+    robots: "noindex, nofollow",
+  });
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
