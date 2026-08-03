@@ -27,8 +27,9 @@ const Index = () => {
 
   // Restore indexable homepage meta after leaving /:code rooms (noindex)
   usePageSeo({
-    title:
-      "LiveShare - Share code in real-time with developers in your browser",
+    title: "Share Code Online Free | LiveShare Real-Time Code Editor",
+    description:
+      "Share code online in real time—no signup. Free live code editor for pair programming, coding interviews, and teaching. Paste code, send a link, collaborate instantly.",
     canonicalPath: "/",
     robots:
       "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
@@ -101,6 +102,60 @@ const Index = () => {
                 {t("hero.ctaSubtext")}
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Primary search intent: share code online */}
+      <section id="share-code-online" className="py-24">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center mb-14">
+            <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-4">
+              {t("searchIntent.title")}
+            </h2>
+            <p className="scroll-animate delay-1 text-muted-foreground text-lg mb-6">
+              {t("searchIntent.subtitle")}
+            </p>
+            <p className="scroll-animate delay-2 text-muted-foreground leading-relaxed">
+              {t("searchIntent.body")}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
+            <div className="scroll-animate delay-0 text-center md:text-left">
+              <h3 className="font-semibold text-lg mb-2">
+                {t("searchIntent.point1Title")}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t("searchIntent.point1Desc")}
+              </p>
+            </div>
+            <div className="scroll-animate delay-1 text-center md:text-left">
+              <h3 className="font-semibold text-lg mb-2">
+                {t("searchIntent.point2Title")}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t("searchIntent.point2Desc")}
+              </p>
+            </div>
+            <div className="scroll-animate delay-2 text-center md:text-left">
+              <h3 className="font-semibold text-lg mb-2">
+                {t("searchIntent.point3Title")}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t("searchIntent.point3Desc")}
+              </p>
+            </div>
+          </div>
+
+          <div className="scroll-animate delay-3 text-center">
+            <Button
+              onClick={navigateToRandomEditor}
+              size="lg"
+              className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+            >
+              {t("searchIntent.cta")}
+            </Button>
           </div>
         </div>
       </section>

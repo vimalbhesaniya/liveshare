@@ -12,7 +12,7 @@ type PageSeoOptions = {
 export const SITE_ORIGIN = "https://www.liveshare.dev";
 
 const DEFAULT_DESCRIPTION =
-  "Share code in real-time with developers in your browser. An online code editor for interviews, troubleshooting, teaching.";
+  "Share code online in real time—no signup. Free live code editor for pair programming, coding interviews, and teaching. Paste code, send a link, collaborate instantly.";
 
 const DEFAULT_ROBOTS =
   "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";

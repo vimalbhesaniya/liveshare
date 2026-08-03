@@ -50,6 +50,8 @@ import {
   SetPasswordDialog,
   EnterPasswordDialog,
 } from "@/components/PasswordDialog";
+import { RetentionPrompt } from "@/components/RetentionPrompt";
+import { useNavigateToRandomEditor } from "@/hooks/use-random-editor";
 
 const SAVE_DEBOUNCE_MS = 3000;
 const DOC_OPS_THROTTLE_MS = 16;
@@ -117,6 +119,7 @@ const EditorPage = () => {
   const { t } = useTranslation();
   const { code: urlCode } = useParams();
   const navigate = useNavigate();
+  const navigateToRandomEditor = useNavigateToRandomEditor();
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("text");
   const [snippetId, setSnippetId] = useState<string | null>(null);
@@ -124,6 +127,7 @@ const EditorPage = () => {
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
+  const [showRetentionPrompt, setShowRetentionPrompt] = useState(false);
   const [fontSize, setFontSize] = useState(() => {
     const saved = localStorage.getItem("liveshare-font-size");
     return saved ? parseInt(saved, 10) : 14;
@@ -898,6 +902,12 @@ const EditorPage = () => {
       title: t("editor.linkCopiedTitle"),
       description: t("editor.linkCopiedDesc"),
     });
+    // One retention ask after share (per room, per browser session)
+    const key = urlCode ? `liveshare-retention:${urlCode}` : "";
+    if (key && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "1");
+      setShowRetentionPrompt(true);
+    }
   };
 
   const handleCopy = () => {
@@ -1143,6 +1153,15 @@ const EditorPage = () => {
           />
         </div>
       </div>
+
+      <RetentionPrompt
+        open={showRetentionPrompt}
+        onDismiss={() => setShowRetentionPrompt(false)}
+        onCreateAnother={() => {
+          setShowRetentionPrompt(false);
+          navigateToRandomEditor();
+        }}
+      />
     </div>
   );
 };

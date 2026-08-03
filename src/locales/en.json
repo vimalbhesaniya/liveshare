@@ -4,10 +4,31 @@
     "newSession": "New Session"
   },
   "hero": {
-    "title": "Share Code in Real-time with Developers",
-    "subtitle": "An online code editor for interviews, troubleshooting, teaching & more…",
+    "title": "Share Code Online in Real Time",
+    "subtitle": "Free online code editor for pair programming, coding interviews, and teaching—no install, no signup.",
     "cta": "Share Code Now",
-    "ctaSubtext": "Share code for free."
+    "ctaSubtext": "Share code online for free. Instant link."
+  },
+  "searchIntent": {
+    "title": "The fastest way to share code online",
+    "subtitle": "LiveShare is built for one job: paste code, share a link, collaborate live.",
+    "body": "Looking for a place to share code online with a teammate or candidate? LiveShare gives you a live browser editor—perfect for remote pair programming, technical interviews, and quick debugging sessions. No VS Code install. No account wall. Just open a room and send the URL.",
+    "point1Title": "Share code online instantly",
+    "point1Desc": "Create a unique link and share code in seconds with anyone who has a browser.",
+    "point2Title": "Real-time pair programming",
+    "point2Desc": "Both of you type in the same editor. Changes sync live—no screen-share friction.",
+    "point3Title": "Built for interviews & teaching",
+    "point3Desc": "Skip the whiteboard. Observe coding interviews, tutor students, or troubleshoot together.",
+    "cta": "Start sharing code"
+  },
+  "retention": {
+    "title": "Keep this session handy?",
+    "subtitle": "Bookmark this room or start a fresh one for your next share.",
+    "bookmark": "Bookmark tip",
+    "bookmarkDesc": "Press {{shortcut}} to bookmark this link in your browser.",
+    "createAnother": "Create another room",
+    "stayHere": "Stay in this room",
+    "dismiss": "Not now"
   },
   "howItWorks": {
     "title": "How Live Share Works",
