@@ -24,6 +24,7 @@ export function createApp() {
         callback(null, false);
       },
       credentials: true,
+      allowedHeaders: ["Content-Type", "x-snippet-password"],
     }),
   );
   app.use(express.json({ limit: "10mb" }));

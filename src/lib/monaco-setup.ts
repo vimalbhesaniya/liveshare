@@ -2,6 +2,7 @@
  * Bundle Monaco workers via Vite instead of CDN.
  * Import once before any Monaco usage.
  */
+import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
@@ -29,3 +30,44 @@ self.MonacoEnvironment = {
     }
   },
 };
+
+// LiveShare is a paste/share editor — turn off language validation squiggles
+// (e.g. JS "Cannot find module" / path errors) for every language.
+monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+  noSemanticValidation: true,
+  noSyntaxValidation: true,
+  noSuggestionDiagnostics: true,
+});
+monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+  noSemanticValidation: true,
+  noSyntaxValidation: true,
+  noSuggestionDiagnostics: true,
+});
+monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+  ...monaco.languages.typescript.javascriptDefaults.getCompilerOptions(),
+  noLib: true,
+  allowNonTsExtensions: true,
+});
+monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+  ...monaco.languages.typescript.typescriptDefaults.getCompilerOptions(),
+  noLib: true,
+  allowNonTsExtensions: true,
+});
+monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+  validate: false,
+  allowComments: true,
+  schemas: [],
+  enableSchemaRequest: false,
+});
+monaco.languages.css.cssDefaults.setOptions({
+  validate: false,
+});
+monaco.languages.css.scssDefaults.setOptions({
+  validate: false,
+});
+monaco.languages.css.lessDefaults.setOptions({
+  validate: false,
+});
+monaco.languages.html.htmlDefaults.setOptions({
+  validate: false,
+});

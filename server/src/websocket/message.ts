@@ -1,5 +1,10 @@
 import type { APIGatewayProxyWebsocketHandlerV2 } from "aws-lambda";
 import { saveSnippet } from "../services/snippet.js";
+import { getSnippet } from "../services/snippet-store.js";
+import {
+  resolvePasswordHash,
+  verifyPassword,
+} from "../lib/password.js";
 import {
   broadcastToRoom,
   syncPresence,
@@ -22,7 +27,16 @@ type WsBody = {
   language?: string;
   baseLength?: number;
   ops?: TextOp[];
+  password?: string;
 };
+
+async function assertRoomAccess(uniqueCode: string, password?: string) {
+  const snippet = await getSnippet(uniqueCode);
+  if (!snippet) return true;
+  const hash = resolvePasswordHash(snippet.password_hash, snippet.code);
+  if (!hash) return true;
+  return Boolean(password && verifyPassword(password, hash));
+}
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   const connectionId = event.requestContext.connectionId!;
@@ -44,6 +58,10 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
   switch (action) {
     case "room:join": {
       if (!body.uniqueCode || !body.userId) break;
+      const allowed = await assertRoomAccess(body.uniqueCode, body.password);
+      if (!allowed) {
+        return { statusCode: 401, body: "Password required" };
+      }
       await updateConnection(connectionId, {
         roomCode: body.uniqueCode,
         userId: body.userId,
@@ -109,6 +127,10 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     case "snippet:save": {
       if (!body.uniqueCode || body.code === undefined) break;
       try {
+        const allowed = await assertRoomAccess(body.uniqueCode, body.password);
+        if (!allowed) {
+          return { statusCode: 401, body: "Password required" };
+        }
         await saveSnippet(body.uniqueCode, body.code, body.language);
         await broadcastToRoom(
           endpoint,

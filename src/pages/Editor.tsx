@@ -25,6 +25,8 @@ import {
   createSnippet,
   updateSnippet,
   saveSnippetKeepalive,
+  unlockSnippet,
+  isPasswordRequiredResponse,
 } from "@/lib/api";
 import { getRealtime, type RealtimeLike } from "@/lib/realtime";
 import {
@@ -47,7 +49,6 @@ import { throttle, debounce } from "@/lib/throttle";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
-  hashPassword,
 } from "@/components/PasswordDialog";
 
 const SAVE_DEBOUNCE_MS = 3000;
@@ -120,8 +121,9 @@ const EditorPage = () => {
   const [language, setLanguage] = useState("text");
   const [snippetId, setSnippetId] = useState<string | null>(null);
   const [snippetReady, setSnippetReady] = useState(false);
-  const [passwordHash, setPasswordHash] = useState<string | null>(null);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(() => {
     const saved = localStorage.getItem("liveshare-font-size");
     return saved ? parseInt(saved, 10) : 14;
@@ -161,11 +163,13 @@ const EditorPage = () => {
   const isDirtyRef = useRef(false);
   const codeRef = useRef(code);
   const languageRef = useRef(language);
-  const passwordHashRef = useRef(passwordHash);
+  const sessionPasswordRef = useRef(sessionPassword);
+  const isAuthenticatedRef = useRef(isAuthenticated);
 
   codeRef.current = code;
   languageRef.current = language;
-  passwordHashRef.current = passwordHash;
+  sessionPasswordRef.current = sessionPassword;
+  isAuthenticatedRef.current = isAuthenticated;
 
   const LARGE_FILE_CHAR_THRESHOLD = 100000;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
@@ -303,9 +307,42 @@ const EditorPage = () => {
     return stringifySnippetPayload({
       code: getLiveCode(),
       language: languageRef.current,
-      passwordHash: passwordHashRef.current,
     });
   }, [getLiveCode]);
+
+  const applyLoadedSnippet = useCallback(
+    (
+      data: {
+        id: string;
+        code: string;
+        language: string;
+        password_protected?: boolean;
+      },
+      password?: string | null,
+    ) => {
+      setSnippetId(data.id);
+      const loaded = data.code || "";
+      lastSyncedCodeRef.current = loaded;
+      const payload = parseSnippetStorage(loaded, data.language || "text");
+      setCode(payload.code);
+      setLanguage(payload.language);
+      syncBaseRef.current = payload.code;
+      const protected_ = Boolean(data.password_protected);
+      setIsPasswordProtected(protected_);
+      if (protected_) {
+        setSessionPassword(password ?? null);
+        setIsAuthenticated(true);
+        if (urlCode && password) {
+          sessionStorage.setItem(`liveshare-pwd:${urlCode}`, password);
+        }
+      } else {
+        setSessionPassword(null);
+        setIsAuthenticated(true);
+        if (urlCode) sessionStorage.removeItem(`liveshare-pwd:${urlCode}`);
+      }
+    },
+    [urlCode],
+  );
 
   useEffect(() => {
     const loadOrCreateSnippet = async () => {
@@ -316,7 +353,23 @@ const EditorPage = () => {
         return;
       }
 
-      const { data, error, status } = await getSnippet(uniqueCode);
+      const savedPwd = sessionStorage.getItem(`liveshare-pwd:${uniqueCode}`);
+      const { data, error, status, raw } = await getSnippet(
+        uniqueCode,
+        savedPwd,
+      );
+
+      if (status === 401 || isPasswordRequiredResponse(raw)) {
+        setSnippetId(
+          isPasswordRequiredResponse(raw) && raw.id ? raw.id : null,
+        );
+        setIsPasswordProtected(true);
+        setIsAuthenticated(false);
+        setSessionPassword(null);
+        setCode("");
+        setSnippetReady(true);
+        return;
+      }
 
       if (error) {
         console.error("Error loading snippet:", error);
@@ -330,25 +383,12 @@ const EditorPage = () => {
       }
 
       if (data && status !== 404) {
-        setSnippetId(data.id);
-        const loaded = data.code || "";
-        lastSyncedCodeRef.current = loaded;
-        const payload = parseSnippetStorage(loaded, data.language || "text");
-        setCode(payload.code);
-        setLanguage(payload.language);
-        syncBaseRef.current = payload.code;
-        if (payload.passwordHash) {
-          setPasswordHash(payload.passwordHash);
-          setIsAuthenticated(false);
-        } else {
-          setIsAuthenticated(true);
-        }
+        applyLoadedSnippet(data, savedPwd);
       } else {
         const welcome = t("editor.welcomeComment");
         const payload = stringifySnippetPayload({
           code: welcome,
           language: "text",
-          passwordHash: null,
         });
         const { data: newSnippet, error: insertError } = await createSnippet(
           uniqueCode,
@@ -368,6 +408,7 @@ const EditorPage = () => {
           setCode(welcome);
           setLanguage("text");
           syncBaseRef.current = welcome;
+          setIsPasswordProtected(false);
           setIsAuthenticated(true);
         }
       }
@@ -376,10 +417,10 @@ const EditorPage = () => {
     };
 
     loadOrCreateSnippet();
-  }, [urlCode, navigate, toast, t]);
+  }, [urlCode, navigate, toast, t, applyLoadedSnippet]);
 
   useEffect(() => {
-    if (!urlCode) return;
+    if (!urlCode || !snippetReady || !isAuthenticated) return;
 
     const socket = getRealtime();
     socketRef.current = socket;
@@ -404,9 +445,6 @@ const EditorPage = () => {
       );
       applyRemoteCode(payload.code);
       setLanguage(payload.language);
-      if (payload.passwordHash) {
-        setPasswordHash(payload.passwordHash);
-      }
       lastSyncedCodeRef.current = remoteRaw;
     };
 
@@ -468,7 +506,13 @@ const EditorPage = () => {
     };
 
     const joinRoom = () => {
-      socket.emit("room:join", { uniqueCode: urlCode, userId: myUserId });
+      socket.emit("room:join", {
+        uniqueCode: urlCode,
+        userId: myUserId,
+        ...(sessionPasswordRef.current
+          ? { password: sessionPasswordRef.current }
+          : {}),
+      });
     };
 
     socket.on("connect", joinRoom);
@@ -498,6 +542,8 @@ const EditorPage = () => {
   }, [
     urlCode,
     myUserId,
+    snippetReady,
+    isAuthenticated,
     getOrCreateModel,
     applyRemoteCode,
     throttledFlushDocOps,
@@ -506,7 +552,7 @@ const EditorPage = () => {
   ]);
 
   const updateDatabase = useCallback(async () => {
-    if (!urlCode) return;
+    if (!urlCode || !isAuthenticatedRef.current) return;
 
     const dataToSave = buildSavePayload();
     lastSentCodeRef.current = dataToSave;
@@ -515,6 +561,7 @@ const EditorPage = () => {
       urlCode,
       dataToSave,
       languageRef.current,
+      { currentPassword: sessionPasswordRef.current },
     );
     if (error) {
       console.error("Error updating snippet:", error);
@@ -531,7 +578,7 @@ const EditorPage = () => {
   }, [urlCode, buildSavePayload, toast, t]);
 
   const flushSave = useCallback(() => {
-    if (!urlCode) return;
+    if (!urlCode || !isAuthenticatedRef.current) return;
     throttledFlushDocOps.flush();
     throttledEmitCode.flush();
     if (updateTimeoutRef.current) {
@@ -540,7 +587,12 @@ const EditorPage = () => {
     }
     if (!isDirtyRef.current) return;
     const dataToSave = buildSavePayload();
-    saveSnippetKeepalive(urlCode, dataToSave, languageRef.current);
+    saveSnippetKeepalive(
+      urlCode,
+      dataToSave,
+      languageRef.current,
+      sessionPasswordRef.current,
+    );
     lastSentCodeRef.current = dataToSave;
     isDirtyRef.current = false;
   }, [urlCode, buildSavePayload, throttledFlushDocOps, throttledEmitCode]);
@@ -593,42 +645,66 @@ const EditorPage = () => {
   }, [urlCode, flushSave]);
 
   const handleSetPassword = (password: string | null) => {
-    const hash = password ? hashPassword(password) : null;
-    setPasswordHash(hash);
     const dataToSave = stringifySnippetPayload({
       code: getLiveCode(),
       language: languageRef.current,
-      passwordHash: hash,
     });
     lastSentCodeRef.current = dataToSave;
-    updateSnippet(urlCode!, dataToSave, languageRef.current).then(
-      ({ error }) => {
-        if (!error) {
-          socketRef.current?.emit("snippet:sync", {
-            uniqueCode: urlCode,
-            code: dataToSave,
-            senderId: myUserId,
-          });
-          toast({
-            title: password
-              ? t("editor.codeProtectedTitle")
-              : t("editor.protectionRemovedTitle"),
-            description: password
-              ? t("editor.codeProtectedDesc")
-              : t("editor.protectionRemovedDesc"),
-          });
-        }
-      },
-    );
+
+    const currentPassword = sessionPasswordRef.current;
+    updateSnippet(urlCode!, dataToSave, languageRef.current, {
+      currentPassword,
+      password,
+    }).then(({ error, data }) => {
+      if (error) {
+        toast({
+          title: t("editor.errorTitle"),
+          description: error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const protected_ = Boolean(data?.password_protected ?? password);
+      setIsPasswordProtected(protected_);
+      if (password) {
+        setSessionPassword(password);
+        sessionStorage.setItem(`liveshare-pwd:${urlCode}`, password);
+      } else {
+        setSessionPassword(null);
+        sessionStorage.removeItem(`liveshare-pwd:${urlCode}`);
+      }
+
+      socketRef.current?.emit("snippet:sync", {
+        uniqueCode: urlCode,
+        code: dataToSave,
+        senderId: myUserId,
+      });
+
+      // Re-join room with updated password credentials
+      socketRef.current?.emit("room:join", {
+        uniqueCode: urlCode,
+        userId: myUserId,
+        ...(password ? { password } : {}),
+      });
+
+      toast({
+        title: password
+          ? t("editor.codeProtectedTitle")
+          : t("editor.protectionRemovedTitle"),
+        description: password
+          ? t("editor.codeProtectedDesc")
+          : t("editor.protectionRemovedDesc"),
+      });
+    });
   };
 
-  const handlePasswordSubmit = (password: string): boolean => {
-    const hash = hashPassword(password);
-    if (hash === passwordHash) {
-      setIsAuthenticated(true);
-      return true;
-    }
-    return false;
+  const handlePasswordSubmit = async (password: string): Promise<boolean> => {
+    if (!urlCode) return false;
+    const { data, error } = await unlockSnippet(urlCode, password);
+    if (error || !data) return false;
+    applyLoadedSnippet(data, password);
+    return true;
   };
 
   const debouncedSizeCheck = useRef(
@@ -710,11 +786,25 @@ const EditorPage = () => {
       syncBaseRef.current = model.getValue();
     }
     setCodeLength(model.getValue().length);
+    monaco.editor.setModelMarkers(model, "owner", []);
+    monaco.editor.setModelMarkers(model, "javascript", []);
+    monaco.editor.setModelMarkers(model, "typescript", []);
+    monaco.editor.setModelMarkers(model, "json", []);
+    monaco.editor.setModelMarkers(model, "css", []);
+    monaco.editor.setModelMarkers(model, "html", []);
 
     contentListenerDisposeRef.current?.dispose();
     contentListenerDisposeRef.current =
       editorInstance.onDidChangeModelContent(() => {
         const value = editorInstance.getModel()?.getValue() ?? "";
+        const m = editorInstance.getModel();
+        if (m) {
+          monaco.editor.setModelMarkers(m, "javascript", []);
+          monaco.editor.setModelMarkers(m, "typescript", []);
+          monaco.editor.setModelMarkers(m, "json", []);
+          monaco.editor.setModelMarkers(m, "css", []);
+          monaco.editor.setModelMarkers(m, "html", []);
+        }
         onLocalEditRef.current(value);
       });
 
@@ -845,7 +935,7 @@ const EditorPage = () => {
     };
   }, []);
 
-  if (snippetReady && passwordHash && !isAuthenticated) {
+  if (snippetReady && isPasswordProtected && !isAuthenticated) {
     return (
       <div className="h-svh overflow-hidden bg-background">
         <Navigation />
@@ -953,7 +1043,7 @@ const EditorPage = () => {
             </Button>
 
             <SetPasswordDialog
-              isProtected={!!passwordHash}
+              isProtected={isPasswordProtected}
               onSetPassword={handleSetPassword}
             />
             <Button
@@ -1032,6 +1122,7 @@ const EditorPage = () => {
               parameterHints: { enabled: false },
               hover: { enabled: false },
               links: false,
+              renderValidationDecorations: "off",
               tabSize: 2,
               insertSpaces: true,
               detectIndentation: true,
@@ -1039,7 +1130,6 @@ const EditorPage = () => {
               formatOnPaste: false,
               formatOnType: false,
               ...(isLargeFile && {
-                renderValidationDecorations: "off",
                 folding: false,
               }),
             }}

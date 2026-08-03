@@ -1,7 +1,6 @@
 export type SnippetPayload = {
   code: string;
   language: string;
-  passwordHash: string | null;
 };
 
 /** Parse DB / legacy multi-tab JSON into a single document. */
@@ -18,19 +17,16 @@ export function parseSnippetStorage(
         language?: string;
       }>;
       const activeId = parsed.activeTabId as string | undefined;
-      const tab =
-        tabs.find((t) => t.id === activeId) ?? tabs[0];
+      const tab = tabs.find((t) => t.id === activeId) ?? tabs[0];
       return {
         code: tab.code ?? "",
         language: tab.language ?? fallbackLanguage,
-        passwordHash: (parsed.passwordHash as string | null) ?? null,
       };
     }
     if (typeof parsed.code === "string") {
       return {
         code: parsed.code,
         language: (parsed.language as string) ?? fallbackLanguage,
-        passwordHash: (parsed.passwordHash as string | null) ?? null,
       };
     }
   } catch {
@@ -39,7 +35,6 @@ export function parseSnippetStorage(
   return {
     code: raw,
     language: fallbackLanguage,
-    passwordHash: null,
   };
 }
 

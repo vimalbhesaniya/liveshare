@@ -14,17 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 
-// Simple hash function for client-side (in production, use server-side hashing)
-export const hashPassword = (password: string): string => {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-};
-
 type SetPasswordDialogProps = {
   isProtected: boolean;
   onSetPassword: (password: string | null) => void;
@@ -166,31 +155,43 @@ export function SetPasswordDialog({
 }
 
 type EnterPasswordDialogProps = {
-  onPasswordSubmit: (password: string) => boolean;
+  onPasswordSubmit: (password: string) => boolean | Promise<boolean>;
+  isSubmitting?: boolean;
 };
 
 export function EnterPasswordDialog({
   onPasswordSubmit,
+  isSubmitting = false,
 }: EnterPasswordDialogProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [attempts, setAttempts] = useState(0);
+  const [busy, setBusy] = useState(false);
   const { t } = useTranslation();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!password) {
       setError(t("password.enterPrompt"));
       return;
     }
+    if (busy || isSubmitting || attempts >= 3) return;
 
-    const isCorrect = onPasswordSubmit(password);
-    if (!isCorrect) {
-      setAttempts((prev) => prev + 1);
-      setError(`${t("password.incorrectPassword")} ${t("password.attemptsRemaining", { count: 3 - attempts - 1 })}`);
-      if (attempts >= 2) {
-        setError(t("password.tooManyAttempts"));
+    setBusy(true);
+    try {
+      const isCorrect = await onPasswordSubmit(password);
+      if (!isCorrect) {
+        setAttempts((prev) => prev + 1);
+        const nextAttempts = attempts + 1;
+        setError(
+          `${t("password.incorrectPassword")} ${t("password.attemptsRemaining", { count: 3 - nextAttempts })}`,
+        );
+        if (nextAttempts >= 3) {
+          setError(t("password.tooManyAttempts"));
+        }
       }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -220,8 +221,10 @@ export function EnterPasswordDialog({
                   setPassword(e.target.value);
                   setError("");
                 }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                disabled={attempts >= 3}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleSubmit();
+                }}
+                disabled={attempts >= 3 || busy || isSubmitting}
                 autoFocus
               />
               <Button
@@ -247,7 +250,7 @@ export function EnterPasswordDialog({
           <Button
             onClick={handleSubmit}
             className="w-full"
-            disabled={attempts >= 3}
+            disabled={attempts >= 3 || busy || isSubmitting}
           >
             <Unlock className="h-4 w-4 mr-2" />
             {t("password.unlockCode")}

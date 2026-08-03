@@ -5,6 +5,7 @@ const codeSnippetSchema = new mongoose.Schema(
     uniqueCode: { type: String, required: true, unique: true, index: true },
     code: { type: String, default: "" },
     language: { type: String, default: "text" },
+    passwordHash: { type: String, default: null },
   },
   { timestamps: true },
 );
@@ -16,6 +17,7 @@ export type CodeSnippetDoc = {
   uniqueCode: string;
   code: string;
   language: string;
+  passwordHash: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
