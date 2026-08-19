@@ -189,5 +189,17 @@
   },
   "languageSelector": {
     "label": "Language"
+  },
+  "searchIntent": {
+    "title": "Najszybszy sposób na udostępnianie kodu online",
+    "subtitle": "LiveShare jest zbudowany do jednego zadania: wklej kod, udostępnij link i współpracuj na żywo.",
+    "body": "Szukasz miejsca, aby udostępniać kod online z członkiem zespołu lub kandydatem? LiveShare oferuje edytor na żywo w przeglądarce—idealny do zdalnego pair programming, rozmów technicznych i szybkich sesji debugowania. Bez instalacji VS Code. Bez blokady konta. Otwórz pokój i wyślij URL.",
+    "point1Title": "Udostępniaj kod od razu",
+    "point1Desc": "Utwórz unikalny link i udostępniaj kod w kilka sekund każdemu, kto ma przeglądarkę.",
+    "point2Title": "Pair programming w czasie rzeczywistym",
+    "point2Desc": "Wy oboje piszecie w tym samym edytorze. Zmiany synchronizują się na żywo—bez tarcia związanego z udostępnianiem ekranu.",
+    "point3Title": "Dla rozmów i nauczania",
+    "point3Desc": "Zrezygnuj z tablicy. Obserwuj rozmowy, ucz studentów lub debugujcie razem.",
+    "cta": "Zacznij udostępniać kod"
   }
 }

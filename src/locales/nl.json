@@ -189,5 +189,17 @@
   },
   "languageSelector": {
     "label": "Language"
+  },
+  "searchIntent": {
+    "title": "De snelste manier om code online te delen",
+    "subtitle": "LiveShare is gemaakt voor één taak: code plakken, een link delen en live samenwerken.",
+    "body": "Op zoek naar een plek om code online te delen met een teamgenoot of kandidaat? LiveShare geeft je een live webeditor—perfect voor remote pair programming, technische interviews en snelle bugs opsporen. Geen VS Code-installatie. Geen accountmuur. Open een room en stuur de URL.",
+    "point1Title": "Deel code direct",
+    "point1Desc": "Maak een unieke link en deel code in seconden met iedereen met een browser.",
+    "point2Title": "Pair programming in realtime",
+    "point2Desc": "Jullie typen allebei in dezelfde editor. Wijzigingen synchroniseren live—zonder gedoe met scherm delen.",
+    "point3Title": "Gemaakt voor interviews & onderwijs",
+    "point3Desc": "Sla het whiteboard over. Bekijk interviews, begeleid studenten of los samen problemen op.",
+    "cta": "Start met code delen"
   }
 }

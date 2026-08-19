@@ -1,5 +1,8 @@
 {
-  "nav": { "editor": "Editor", "newSession": "Nueva sesión" },
+  "nav": {
+    "editor": "Editor",
+    "newSession": "Nueva sesión"
+  },
   "hero": {
     "title": "Comparte código en tiempo real con desarrolladores",
     "subtitle": "Un editor de código en línea para entrevistas, resolución de problemas, enseñanza y más…",
@@ -179,6 +182,24 @@
     "tooManyAttempts": "Demasiados intentos fallidos. Actualiza la página e intenta de nuevo.",
     "unlockCode": "Desbloquear código"
   },
-  "notFound": { "title": "404", "message": "¡Ups! Página no encontrada", "returnHome": "Volver al inicio" },
-  "languageSelector": { "label": "Idioma" }
+  "notFound": {
+    "title": "404",
+    "message": "¡Ups! Página no encontrada",
+    "returnHome": "Volver al inicio"
+  },
+  "languageSelector": {
+    "label": "Idioma"
+  },
+  "searchIntent": {
+    "title": "La forma más rápida de compartir código en línea",
+    "subtitle": "LiveShare está pensado para una sola tarea: pega el código, comparte un enlace y colabora en vivo.",
+    "body": "¿Buscas un lugar para compartir código en línea con un compañero o un candidato? LiveShare te ofrece un editor en vivo desde el navegador—ideal para programación en pareja remota, entrevistas técnicas y sesiones rápidas de depuración. Sin instalar VS Code. Sin muro de cuentas. Abre una sala y envía la URL.",
+    "point1Title": "Comparte código al instante",
+    "point1Desc": "Crea un enlace único y comparte tu código en segundos con cualquiera que tenga un navegador.",
+    "point2Title": "Programación en pareja en tiempo real",
+    "point2Desc": "Ambos escriben en el mismo editor. Los cambios se sincronizan en vivo—sin fricción al compartir pantalla.",
+    "point3Title": "Hecho para entrevistas y enseñanza",
+    "point3Desc": "Olvida el pizarrón. Observa entrevistas, enseña a estudiantes o depuren juntos.",
+    "cta": "Comenzar a compartir código"
+  }
 }

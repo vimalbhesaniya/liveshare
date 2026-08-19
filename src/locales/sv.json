@@ -189,5 +189,17 @@
   },
   "languageSelector": {
     "label": "Language"
+  },
+  "searchIntent": {
+    "title": "Det snabbaste sättet att dela kod online",
+    "subtitle": "LiveShare är byggt för en enda uppgift: klistra in kod, dela en länk och samarbeta i realtid.",
+    "body": "Letar du efter ett ställe att dela kod online med en kollega eller kandidat? LiveShare ger dig en live webbredigerare—perfekt för fjärran parprogrammering, tekniska intervjuer och snabba felsökningssessioner. Ingen VS Code-installation. Ingen konto-spärr. Öppna bara ett rum och skicka URL:en.",
+    "point1Title": "Dela kod direkt",
+    "point1Desc": "Skapa en unik länk och dela kod på några sekunder med vem som helst som har en webbläsare.",
+    "point2Title": "Parprogrammering i realtid",
+    "point2Desc": "Ni skriver båda i samma redigerare. Ändringar synkas live—utan friktion vid skärmdelning.",
+    "point3Title": "Byggt för intervjuer & undervisning",
+    "point3Desc": "Hoppa över whiteboarden. Följ intervjuer, handled studenter eller felsök tillsammans.",
+    "cta": "Börja dela kod"
   }
 }

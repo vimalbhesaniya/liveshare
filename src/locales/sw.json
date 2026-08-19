@@ -189,5 +189,17 @@
   },
   "languageSelector": {
     "label": "Language"
+  },
+  "searchIntent": {
+    "title": "Njia ya haraka zaidi ya kushiriki msimbo mtandaoni",
+    "subtitle": "LiveShare imejengwa kwa jukumu moja: weka msimbo, shiriki kiungo, na ushirikiane moja kwa moja.",
+    "body": "Unatafuta mahali pa kushiriki msimbo mtandaoni na mwenzako au mgombea? LiveShare inakupa mhariri wa moja kwa moja unaofanya kazi kwenye kivinjari—inafaa kwa pair programming ya mbali, mahojiano ya kiufundi, na vipindi vya haraka vya kutatua matatizo. Hakuna kusakinisha VS Code. Hakuna kizuizi cha akaunti. Fungua tu chumba na utume URL.",
+    "point1Title": "Shiriki msimbo mara moja",
+    "point1Desc": "Unda kiungo cha kipekee na ushiriki msimbo ndani ya sekunde na mtu yeyote aliye na kivinjari.",
+    "point2Title": "Ushirikiano wa pair kwa wakati halisi",
+    "point2Desc": "Ninyi mnaandika kwenye mhariri ule ule. Mabadiliko yanafanyika moja kwa moja—bila usumbufu wa kushiriki skrini.",
+    "point3Title": "Imetengenezwa kwa mahojiano & kufundisha",
+    "point3Desc": "Puuza ubao mweupe. Tazama mahojiano, fundisha wanafunzi, au tatizeni pamoja.",
+    "cta": "Anza kushiriki msimbo"
   }
 }
