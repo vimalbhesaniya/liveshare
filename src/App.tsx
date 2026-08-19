@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Suspense, lazy } from "react";
 import { PageLoader } from "@/components/PageLoader";
 import { WhatsAppFloatButton } from "@/components/WhatsAppFloatButton";
+import { FeedbackModal } from "@/components/FeedbackModal";
+import { useExitIntent } from "@/hooks/useExitIntent";
 
 // Lazy load heavy components for better performance
 const Index = lazy(() => import("./pages/Index"));
@@ -15,31 +17,43 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      storageKey="liveshare-theme"
-    >
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/:code" element={<Editor />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <WhatsAppFloatButton />
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [showFeedback, markAsShown] = useExitIntent();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        storageKey="liveshare-theme"
+      >
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+
+          <FeedbackModal
+            open={showFeedback}
+            onOpenChange={(open) => {
+              if (!open) markAsShown();
+            }}
+          />
+
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/:code" element={<Editor />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <WhatsAppFloatButton />
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
