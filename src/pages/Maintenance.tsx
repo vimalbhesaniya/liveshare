@@ -17,12 +17,12 @@ const Maintenance = ({ message }: MaintenanceProps) => {
             LiveShare
           </div>
           <h1 className="mb-3 text-3xl font-bold tracking-tight">
-            Under maintenance
+            Site under maintenance
           </h1>
           <p className="text-base text-muted-foreground">
             {message?.trim()
               ? message
-              : "We’re doing some improvements right now. Please check back in a bit."}
+              : "We are doing some improvements right now. Please check back after some time."}
           </p>
 
           <div className="mt-8">

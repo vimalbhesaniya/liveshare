@@ -42,7 +42,7 @@ async function request<T>(
     if (res.status === 401) {
       return {
         data: null,
-        error: (body as { error?: string }).error || "Password required",
+        error: (body as { error?: string }).error || "Need password to open this code",
         status: 401,
         raw: body,
       };

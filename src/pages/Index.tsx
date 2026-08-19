@@ -3,6 +3,7 @@ import { FeatureCard } from "@/components/FeatureCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useNavigateToRandomEditor } from "@/hooks/use-random-editor";
+import { SiteFooter } from "@/components/SiteFooter";
 import {
   Users,
   Video,
@@ -29,7 +30,7 @@ const Index = () => {
   usePageSeo({
     title: "Share Code Online Free | LiveShare Real-Time Code Editor",
     description:
-      "Share code online in real time—no signup. Free live code editor for pair programming, coding interviews, and teaching. Paste code, send a link, collaborate instantly.",
+      "Share code online in real time — no signup. Free live editor for pair programming, interview and teaching. Paste code, send link, work together instantly.",
     canonicalPath: "/",
     robots:
       "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
@@ -525,21 +526,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="scroll-animate border-t border-border py-12">
-        <div className="container mx-auto px-6">
-          <div className="text-center text-muted-foreground space-y-4">
-            <p className="text-sm">{t("footer.usedBy")}</p>
-            <nav className="flex flex-wrap justify-center gap-6 text-sm">
-              <Link to="/" className="hover:text-foreground transition-colors">{t("footer.home")}</Link>
-              <button onClick={navigateToRandomEditor} className="hover:text-foreground transition-colors">{t("footer.liveShareCode")}</button>
-              <a href="#how-it-works" className="hover:text-foreground transition-colors">{t("footer.howToLiveShare")}</a>
-              <a href="#features" className="hover:text-foreground transition-colors">{t("footer.features")}</a>
-              <a href="https://www.liveshare.dev/" className="hover:text-foreground transition-colors">{t("footer.liveShareDev")}</a>
-            </nav>
-            <p className="text-xs mt-4">{t("footer.copyright")}</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

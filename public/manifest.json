@@ -1,7 +1,7 @@
 {
-  "name": "LiveShare - Share code in real-time",
+  "name": "LiveShare - Share Code Online Free",
   "short_name": "LiveShare",
-  "description": "Share code in real-time with developers in your browser. An online code editor for interviews, troubleshooting, teaching.",
+  "description": "Free live code editor in browser. Share code with link, work together in real time. Good for interview, pair programming and teaching.",
   "start_url": "https://www.liveshare.dev/",
   "id": "https://www.liveshare.dev/",
   "display": "standalone",
@@ -51,7 +51,7 @@
       "sizes": "1200x630",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "LiveShare homepage preview"
+      "label": "LiveShare homepage"
     }
   ]
 }
