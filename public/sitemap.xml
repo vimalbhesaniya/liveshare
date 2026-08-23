@@ -33,9 +33,15 @@
   </url>
   <url>
     <loc>https://www.liveshare.dev/blog</loc>
-    <lastmod>2026-08-19</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2026-08-23</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.liveshare.dev/blog/debug-code-together-online</loc>
+    <lastmod>2026-08-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://www.liveshare.dev/blog/pair-programming-interview-tools</loc>

@@ -12,147 +12,210 @@ const POSTS: Record<
     content: string;
   }
 > = {
+  "debug-code-together-online": {
+    title: "How to Debug Code Together Online (No Setup)",
+    date: "2026-08-23",
+    content: `
+When code not working, many people send screenshot or long WhatsApp text. Friend still confuse because he not see full code. Better way is both sit in same editor and fix together.
+
+This writing tell simple way to debug online with friend, teacher or junior — no install, no signup.
+
+Why screenshot and screen share not enough
+1) Screenshot show only small part
+Friend see one error line. He not know nearby code.
+
+2) Screen share is only watching
+Other person cannot type. They cannot put console.log or try small change.
+
+3) Setup take too much time
+If you say clone my GitHub, then install start, and sometimes still not run same. 20-30 minute gone.
+
+LiveShare solve this. You paste code, get link, share. Both edit same place.
+
+How to debug together (simple steps)
+Step 1: Open room
+Open LiveShare and make new room. Account not need.
+
+Step 2: Paste broken code
+Paste file or small part where bug come. If error message is there, put that also on top as comment.
+
+Step 3: Share link
+Send URL to friend. They open browser and join.
+
+Step 4: First talk about bug
+Before edit, both agree:
+- What should happen?
+- What happen now?
+- From when it break?
+
+Step 5: Fix slow slow
+Do like this:
+1) See bug one time
+2) Add one log
+3) Change one thing
+4) Check again
+5) Tell what you understand
+
+Don’t change 10 place together. Then more confuse.
+
+Step 6: Clean the fix
+When bug find, remove extra logs and keep code clean. If code private, put password on room.
+
+Small tips
+- First share only needed file, not full project.
+- One person type 5 minute, then other person type.
+- Speak your thinking (“maybe null come from API”).
+- If stuck more than 10 minute, write small plan in comment then continue.
+
+When this help
+- Student stuck in homework and teacher help
+- Junior need help from senior for one bug
+- Interview later part when both debug together
+- Open source help without install fight
+
+End
+Only voice call not enough for debug. Need same code in front of both. Paste code → share link → fix live. This is why LiveShare useful.
+`,
+  },
   "pair-programming-interview-tools": {
     title: "Best Free Tools for Pair Programming Interviews",
     date: "2026-08-03",
     content: `
-Pair programming interview is stressful for candidate and take time for interviewer also. Main reason is setup time eat the actual coding time. Good tools remove this problem so both can focus on problem only.
+Pair programming interview is hard for candidate and for interviewer also. Main problem is setup. Install, login, editor open — time finish and coding not start. Good tool remove this headache.
 
-Below is simple checklist for free (or no-signup) tools for live coding interview, plus how you can use them today.
+Here I write simple points for free tools (or no signup tools) for live coding interview.
 
-What you want in interview editor
-1) Zero onboarding
-Candidate should not need account, download or environment setup to start coding. Simple share link is best.
+What tool should have
+1) Easy start
+Candidate not need account or download. Only link is enough.
 
-2) Live editing together
-Interview work best when both see edits immediately. If only one person can type, other person only watching — not good shared reasoning.
+2) Both can type
+If only one type and other watch, that is not real pair work. Both should see change live.
 
-3) Language support for your tasks
-Look for syntax highlighting for languages you interview in — JavaScript/TypeScript, Python, Java, C/C++ and more.
+3) Language support
+Tool should show nice color for JS, Python, Java, C++ etc. Whatever you ask in interview.
 
-4) Clear security controls
-Even in practice mode, some teams want password on room. Optional access control help keep interview private.
+4) Password option
+Some company want private room. So password option is good.
 
-5) Good reset experience
-Many times candidate start again. Tool should handle refresh and reload cleanly with same room link.
+5) Refresh should work
+Candidate refresh page and same room open again with same link. This is important.
 
 Where LiveShare fit
-LiveShare is made for fast interview sessions:
-- No signup need.
-- Unique room link you share right away.
-- Real-time editing in browser — candidate no need install anything.
-- Optional password for private interview.
+LiveShare is made for this type fast interview:
+- No signup.
+- One link you share quickly.
+- Edit in browser — no install.
+- Password also available if you want.
 
-How to use these tools (quick workflow)
-Step 1: Before call
-Prepare short problem and starter template. Decide what you check — correctness, communication, edge cases.
+How to use in interview
+Before call
+Make short question and small starter code. Decide what you check — correct answer, talking, edge case.
 
-Step 2: On call
-Open editor room and ask candidate to paste problem template. Confirm language selection.
+On call
+Open room, tell candidate paste starter code. Check language is correct.
 
-Step 3: During coding
-Work in small steps: implement → test → explain. Ask candidate to speak assumptions and trade-offs.
+During coding
+Go slow: write → test → explain. Ask candidate why they choose this way.
 
-Step 4: Wrap up
-Summarize approach, ask one reflection question (“What you improve if more time?”), and tell next steps.
+End
+Tell summary, ask one question like “If more time, what you improve?”, then say next step.
 
-Bottom line
-Free tools can still work well if they have live editing, less friction and easy re-entry. LiveShare workflow (paste code → share link → work together) is built for exactly this.
+Last line
+Free tool also good if it is fast and both can edit. LiveShare flow is paste → share link → work together. Same thing interview need.
 `,
   },
   "remote-coding-interview-step-by-step": {
     title: "How to Run Remote Coding Interview (Step by Step)",
     date: "2026-08-03",
     content: `
-Remote coding interview work best when you treat it like guided work together, not only “screen share event.”
+Remote coding interview work good when you treat it like together work, not only screen share show.
 
-Here is step-by-step process you can use for most technical interviews.
+Here is simple steps you can follow.
 
-1) Pick format and language early
-Confirm language and scope. If task is algorithm type, mention expected complexity. If product type, clarify input/output examples.
+1) Decide language early
+Tell language and what type question. If algorithm, say roughly how hard. If product type, give input output example.
 
-2) Share room link (not repository)
-Candidate should start coding in seconds. Sharing GitHub repo often cause delay — install, build error, dependency mismatch.
+2) Share room link, not GitHub
+Candidate should start in few seconds. GitHub many time fail because install and dependency problem.
 
-Instead:
-- Create shared room.
-- Paste starter code (or clear blank template).
-- Share unique link.
+Do like this:
+- Make shared room
+- Paste starter code
+- Share link
 
-3) Set expectations about working together
-Tell candidate how you will work:
-- Both read and edit same code.
-- You ask “why” questions, not only “what.”
-- You use shared editor for examples and test cases.
+3) Tell how you will work
+Say clearly:
+- Both can read and edit
+- You ask why, not only what
+- Test case also write in same editor
 
-4) Guide first milestone
-First 5–10 minutes should show progress:
-- Confirm problem is understood.
-- Implement simplest working solution.
-- Add one test case.
+4) First 5-10 minute should show progress
+- Candidate understand question
+- Write small working code
+- Add one test
 
-5) Iterate with short cycles
-Use small loops:
-implement → run → explain → refine.
+5) Small cycle again and again
+Write → run → explain → improve.
 
-Short cycles reduce confusion and keep candidate in thinking mode.
+This keep candidate thinking, not confuse.
 
-6) Evaluate communication and correctness together
-Good candidate explain trade-offs. Strong solution show edge-case awareness.
+6) Check talking and correct code both
+Good candidate explain trade-off. Good code also think about edge case.
 
-If candidate get stuck:
-- Ask for assumptions.
-- Tell them to write plan first.
-- Break task into smaller steps.
+If candidate stuck:
+- Ask what they assume
+- Tell write plan first
+- Break problem small small
 
-7) Close with reflection question
-When time is almost over, ask:
-“If you had 30 more minutes, what you improve and why?”
+7) Last question
+Near end ask:
+“If 30 minute more, what you improve and why?”
 
-This show depth of thinking beyond final code.
+This show thinking, not only final code.
 
-Why live editor is better than screen sharing
-Screen sharing feel like watching demo. Live editor make interview interactive. Candidate see effect of changes instantly and you reason about code in same place.
+Why live editor better than screen share
+Screen share feel like demo video. Live editor is real work. Change show immediately and both talk on same code.
 
-LiveShare work well because editing happen inside editor with minimal setup. You can return to same shared link if something happen during call.
+LiveShare good because setup almost zero. Same link you can open again if call have problem.
 `,
   },
   "live-editor-vs-screen-sharing": {
     title: "Live Editor vs Screen Sharing — Why It Matters",
     date: "2026-08-03",
     content: `
-Screen sharing is familiar, but many times it make working together passive. Live editors change this.
+Screen share everyone know. But many time it make other person only watching. Live editor change that.
 
-What usually go wrong with screen sharing
-1) Cognitive load
-Brain must understand what interviewer doing, what candidate seeing, and what changes mean.
+Problem with screen sharing
+1) Brain get tired
+You try understand what interviewer doing, what candidate see, and what change mean — too much.
 
-2) Slower feedback loops
-Edits get explained after they happen. With live editor, changes appear instantly in shared context.
+2) Feedback slow
+First they edit, later they explain. In live editor change come same time.
 
-3) Communication gaps
-When candidate cannot edit (or scroll to exact lines), misunderstanding stay longer.
+3) Talk not clear
+If candidate cannot edit or go to exact line, confuse stay long time.
 
-What live editors improve
-Shared code context
-Both sides work in same buffer. When change appear, it is immediately part of conversation.
+What live editor make better
+Same code in front of both
+When someone type, other person see now. Talk become easy.
 
-Fewer setup distractions
-People no need to copy environment or debug unrelated tooling issues mid-interview.
+Less setup drama
+No need same laptop setup in middle of interview. No random install error.
 
-Better teaching and mentoring
-When learning happen in code itself, students ask targeted questions about specific lines instead of only watching explanation.
+Teaching also better
+Student can ask on exact line. Not only watch teacher slide or screen.
 
 Where LiveShare fit
-LiveShare is optimized for short flow:
+LiveShare flow is short:
 1) Paste code
-2) Get unique link
-3) Share and work together live
+2) Get link
+3) Share and work live
 
-This help you start quickly and keep focus on reasoning — not on tooling.
+So you start fast and mind stay on problem, not on tool.
 
-Try for your next session
-If you run pair programming, technical interview or tutoring session, test live editor approach for first 15 minutes. You will likely see faster progress and clearer communication.
+Try next time
+If you do pair programming, interview or tuition, try live editor for first 15 minute. Mostly you feel work go faster and talk more clear.
 `,
   },
 };
@@ -166,8 +229,8 @@ export default function BlogPost() {
   usePageSeo({
     title: post ? `${post.title} | LiveShare` : "Blog post | LiveShare",
     description:
-      post?.content?.slice(0, 160) ||
-      "Read guides about pair programming, remote coding interview and teaching with real-time shared editor.",
+      post?.content?.replace(/\s+/g, " ").trim().slice(0, 160) ||
+      "Simple guides about pair programming, remote interview and teaching with live shared editor.",
     canonicalPath: post ? `/blog/${key}` : "/blog",
     robots: "index, follow",
   });
@@ -179,7 +242,7 @@ export default function BlogPost() {
         <main className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
           <h1 className="text-3xl font-bold mb-4">Post not found</h1>
           <p className="text-muted-foreground mb-6">
-            This blog post does not exist.
+            This blog post is not exist.
           </p>
           <Link
             to="/blog"
@@ -199,9 +262,7 @@ export default function BlogPost() {
       <main className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
         <div className="max-w-3xl">
           <div className="text-sm text-muted-foreground mb-3">{post.date}</div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-6">
-            {post.title}
-          </h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-6">{post.title}</h1>
           <div className="prose prose-slate whitespace-pre-wrap">
             {post.content.trim()}
           </div>
