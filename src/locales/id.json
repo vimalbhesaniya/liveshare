@@ -113,7 +113,7 @@
     "howToLiveShare": "How to Live Share",
     "features": "Fitur",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - Editor Kode Online Gratis dan Platform Live Code Sharing"
+    "copyright": "© 2026 Live Share - Editor Kode Online Gratis dan Platform Live Code Sharing"
   },
   "editor": {
     "language": "Bahasa",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "Gagal memuat kode. Coba lagi.",
     "errorCreateSnippet": "Gagal buat kode. Coba lagi.",
     "errorSaveSnippet": "Gagal simpan perubahan. Cek koneksi kamu.",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "Kode Dilindungi!",
     "codeProtectedDesc": "Bagikan password ke orang yang mau kamu kasih akses.",
     "protectionRemovedTitle": "Perlindungan Dihapus",
@@ -161,7 +162,12 @@
     "collabLeft": "Kolaborator keluar",
     "collabsLeft": "Kolaborator keluar",
     "startedCollab": "mulai kerja",
-    "stoppedCollab": "berhenti kerja"
+    "stoppedCollab": "berhenti kerja",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "Kami mau masukan kamu",

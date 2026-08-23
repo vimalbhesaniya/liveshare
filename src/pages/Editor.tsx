@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Copy,
   Share2,
   Download,
@@ -18,6 +23,8 @@ import {
   Minus,
   Map as MapIcon,
   Users,
+  Eye,
+  Link2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -121,6 +128,8 @@ type UserSelection = {
 const EditorPage = () => {
   const { t } = useTranslation();
   const { code: urlCode } = useParams();
+  const location = useLocation();
+  const readOnly = location.pathname.startsWith("/r/");
   const navigate = useNavigate();
   const navigateToRandomEditor = useNavigateToRandomEditor();
   const [code, setCode] = useState("");
@@ -131,6 +140,7 @@ const EditorPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [showRetentionPrompt, setShowRetentionPrompt] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [fontSize, setFontSize] = useState(() => {
     const saved = localStorage.getItem("liveshare-font-size");
     return saved ? parseInt(saved, 10) : 14;
@@ -172,11 +182,13 @@ const EditorPage = () => {
   const languageRef = useRef(language);
   const sessionPasswordRef = useRef(sessionPassword);
   const isAuthenticatedRef = useRef(isAuthenticated);
+  const readOnlyRef = useRef(readOnly);
 
   codeRef.current = code;
   languageRef.current = language;
   sessionPasswordRef.current = sessionPassword;
   isAuthenticatedRef.current = isAuthenticated;
+  readOnlyRef.current = readOnly;
 
   const LARGE_FILE_CHAR_THRESHOLD = 100000;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
@@ -216,6 +228,13 @@ const EditorPage = () => {
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize });
   }, [fontSize]);
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      readOnly,
+      domReadOnly: readOnly,
+    });
+  }, [readOnly]);
 
   useEffect(() => {
     if (editorRef.current && resolvedTheme) {
@@ -391,6 +410,12 @@ const EditorPage = () => {
 
       if (data && status !== 404) {
         applyLoadedSnippet(data, savedPwd);
+      } else if (readOnly) {
+        toast({
+          title: t("editor.errorTitle"),
+          description: t("editor.errorSnippetNotFound"),
+          variant: "destructive",
+        });
       } else {
         const welcome = t("editor.welcomeComment");
         const payload = stringifySnippetPayload({
@@ -424,7 +449,7 @@ const EditorPage = () => {
     };
 
     loadOrCreateSnippet();
-  }, [urlCode, navigate, toast, t, applyLoadedSnippet]);
+  }, [urlCode, navigate, toast, t, applyLoadedSnippet, readOnly]);
 
   useEffect(() => {
     if (!urlCode || !snippetReady || !isAuthenticated) return;
@@ -516,6 +541,7 @@ const EditorPage = () => {
       socket.emit("room:join", {
         uniqueCode: urlCode,
         userId: myUserId,
+        role: readOnlyRef.current ? "viewer" : "editor",
         ...(sessionPasswordRef.current
           ? { password: sessionPasswordRef.current }
           : {}),
@@ -551,6 +577,7 @@ const EditorPage = () => {
     myUserId,
     snippetReady,
     isAuthenticated,
+    readOnly,
     getOrCreateModel,
     applyRemoteCode,
     throttledFlushDocOps,
@@ -559,7 +586,7 @@ const EditorPage = () => {
   ]);
 
   const updateDatabase = useCallback(async () => {
-    if (!urlCode || !isAuthenticatedRef.current) return;
+    if (!urlCode || !isAuthenticatedRef.current || readOnlyRef.current) return;
 
     const dataToSave = buildSavePayload();
     lastSentCodeRef.current = dataToSave;
@@ -585,7 +612,7 @@ const EditorPage = () => {
   }, [urlCode, buildSavePayload, toast, t]);
 
   const flushSave = useCallback(() => {
-    if (!urlCode || !isAuthenticatedRef.current) return;
+    if (!urlCode || !isAuthenticatedRef.current || readOnlyRef.current) return;
     throttledFlushDocOps.flush();
     throttledEmitCode.flush();
     if (updateTimeoutRef.current) {
@@ -719,6 +746,7 @@ const EditorPage = () => {
   ).current;
 
   const handleLocalCodeChange = (newCode: string) => {
+    if (readOnlyRef.current) return;
     if (getIsApplyingRemoteOps()) return;
 
     const syncBase = syncBaseRef.current;
@@ -754,6 +782,7 @@ const EditorPage = () => {
   onLocalEditRef.current = handleLocalCodeChange;
 
   const handleLanguageChange = (newLanguage: string) => {
+    if (readOnlyRef.current) return;
     const model = modelRef.current ?? editorRef.current?.getModel();
     if (model) {
       monaco.editor.setModelLanguage(model, getModelLanguage(newLanguage));
@@ -824,7 +853,7 @@ const EditorPage = () => {
     });
 
     editorInstance.onDidChangeCursorSelection((e) => {
-      if (!urlCode || !socketRef.current) return;
+      if (!urlCode || !socketRef.current || readOnlyRef.current) return;
 
       const selection = e.selection;
       const m = editorInstance.getModel();
@@ -899,18 +928,38 @@ const EditorPage = () => {
     };
   }, [userSelections]);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const getShareLinks = () => {
+    const origin = window.location.origin;
+    const code = urlCode ?? "";
+    return {
+      editUrl: `${origin}/${code}`,
+      viewUrl: `${origin}/r/${code}`,
+    };
+  };
+
+  const handleCopyEditLink = () => {
+    const { editUrl } = getShareLinks();
+    navigator.clipboard.writeText(editUrl);
+    setShareOpen(false);
     toast({
       title: t("editor.linkCopiedTitle"),
-      description: t("editor.linkCopiedDesc"),
+      description: t("editor.editLinkCopiedDesc"),
     });
-    // One retention ask after share (per room, per browser session)
     const key = urlCode ? `liveshare-retention:${urlCode}` : "";
     if (key && !sessionStorage.getItem(key)) {
       sessionStorage.setItem(key, "1");
       setShowRetentionPrompt(true);
     }
+  };
+
+  const handleCopyViewLink = () => {
+    const { viewUrl } = getShareLinks();
+    navigator.clipboard.writeText(viewUrl);
+    setShareOpen(false);
+    toast({
+      title: t("editor.linkCopiedTitle"),
+      description: t("editor.viewLinkCopiedDesc"),
+    });
   };
 
   const handleCopy = () => {
@@ -967,7 +1016,11 @@ const EditorPage = () => {
       <div className="container-fluid mx-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden px-2 sm:px-3 pb-1 pt-[4.75rem] sm:pt-20">
         <div className="mb-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-4 md:gap-6">
-            <Select value={language} onValueChange={handleLanguageChange}>
+            <Select
+              value={language}
+              onValueChange={handleLanguageChange}
+              disabled={readOnly}
+            >
               <SelectTrigger className="w-[130px] sm:w-[160px] md:w-[200px]">
                 <SelectValue placeholder={t("editor.language")} />
               </SelectTrigger>
@@ -997,6 +1050,13 @@ const EditorPage = () => {
                 <SelectItem value="dockerfile">Dockerfile</SelectItem>
               </SelectContent>
             </Select>
+
+            {readOnly && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-muted-foreground text-sm font-medium">
+                <Eye className="w-4 h-4" />
+                <span>{t("editor.viewOnly")}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-primary text-sm font-medium">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
@@ -1058,10 +1118,12 @@ const EditorPage = () => {
               <span className="hidden lg:inline ml-2">{t("editor.minimap")}</span>
             </Button>
 
-            <SetPasswordDialog
-              isProtected={isPasswordProtected}
-              onSetPassword={handleSetPassword}
-            />
+            {!readOnly && (
+              <SetPasswordDialog
+                isProtected={isPasswordProtected}
+                onSetPassword={handleSetPassword}
+              />
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1081,10 +1143,32 @@ const EditorPage = () => {
               <span className="hidden md:inline">{t("editor.download")}</span>
             </Button>
 
-            <Button size="sm" onClick={handleShare} className="px-2 sm:px-3">
-              <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
-              <span className="hidden md:inline">{t("editor.share")}</span>
-            </Button>
+            <Popover open={shareOpen} onOpenChange={setShareOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" className="px-2 sm:px-3">
+                  <Share2 className="h-4 w-4 sm:mr-1 md:mr-2" />
+                  <span className="hidden md:inline">{t("editor.share")}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-2">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                  onClick={handleCopyEditLink}
+                >
+                  <Link2 className="h-4 w-4 shrink-0" />
+                  {t("editor.copyEditLink")}
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                  onClick={handleCopyViewLink}
+                >
+                  <Eye className="h-4 w-4 shrink-0" />
+                  {t("editor.copyViewLink")}
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -1105,6 +1189,8 @@ const EditorPage = () => {
             keepCurrentModel={true}
             theme={monacoTheme}
             options={{
+              readOnly,
+              domReadOnly: readOnly,
               fontSize: fontSize,
               fontFamily:
                 "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",

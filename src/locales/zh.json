@@ -113,7 +113,7 @@
     "howToLiveShare": "如何实时分享",
     "features": "功能",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - 免费在线代码编辑器和实时代码分享平台"
+    "copyright": "© 2026 Live Share - 免费在线代码编辑器和实时代码分享平台"
   },
   "editor": {
     "language": "语言",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "无法加载代码片段。请重试。",
     "errorCreateSnippet": "无法创建代码片段。请重试。",
     "errorSaveSnippet": "无法保存更改。请检查网络连接。",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "代码已保护！",
     "codeProtectedDesc": "把密码分享给你想授权的人。",
     "protectionRemovedTitle": "保护已移除",
@@ -161,7 +162,12 @@
     "collabLeft": "有人离开了",
     "collabsLeft": "有人离开了",
     "startedCollab": "开始协作",
-    "stoppedCollab": "停止协作"
+    "stoppedCollab": "停止协作",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "我们想听你的反馈",

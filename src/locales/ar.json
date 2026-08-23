@@ -113,7 +113,7 @@
     "howToLiveShare": "How to Live Share",
     "features": "الميزات",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - محرر كود أونلاين مجاني ومنصة مشاركة كود مباشرة"
+    "copyright": "© 2026 Live Share - محرر كود أونلاين مجاني ومنصة مشاركة كود مباشرة"
   },
   "editor": {
     "language": "اللغة",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "ما قدرنا نحمّل الكود. حاول مرة ثانية.",
     "errorCreateSnippet": "ما قدرنا ننشئ الكود. حاول مرة ثانية.",
     "errorSaveSnippet": "ما قدرنا نحفظ التغييرات. تحقق من الاتصال.",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "الكود محمي!",
     "codeProtectedDesc": "شارك كلمة المرور مع الناس اللي تبي تعطيهم صلاحية.",
     "protectionRemovedTitle": "تمت إزالة الحماية",
@@ -161,7 +162,12 @@
     "collabLeft": "غادر متعاون",
     "collabsLeft": "غادر متعاونون",
     "startedCollab": "بدأ يشتغل",
-    "stoppedCollab": "توقف عن العمل"
+    "stoppedCollab": "توقف عن العمل",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "نريد رأيك",

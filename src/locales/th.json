@@ -113,7 +113,7 @@
     "howToLiveShare": "วิธี Live Share",
     "features": "ฟีเจอร์",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - ตัวแก้ไขโค้ดออนไลน์ฟรีและแพลตฟอร์มแชร์โค้ดแบบ live"
+    "copyright": "© 2026 Live Share - ตัวแก้ไขโค้ดออนไลน์ฟรีและแพลตฟอร์มแชร์โค้ดแบบ live"
   },
   "editor": {
     "language": "ภาษา",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "โหลด code snippet ไม่ได้ ลองอีกครั้ง",
     "errorCreateSnippet": "สร้าง code snippet ไม่ได้ ลองอีกครั้ง",
     "errorSaveSnippet": "บันทึกการเปลี่ยนแปลงไม่ได้ ตรวจสอบการเชื่อมต่อ",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "โค้ดถูกป้องกันแล้ว!",
     "codeProtectedDesc": "แชร์รหัสผ่านกับคนที่คุณอยากให้เข้าถึง",
     "protectionRemovedTitle": "เอาการป้องกันออกแล้ว",
@@ -161,7 +162,12 @@
     "collabLeft": "มีคนออกไป",
     "collabsLeft": "มีคนออกไป",
     "startedCollab": "เริ่มทำงาน",
-    "stoppedCollab": "หยุดทำงาน"
+    "stoppedCollab": "หยุดทำงาน",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "เราอยากได้ feedback จากคุณ",

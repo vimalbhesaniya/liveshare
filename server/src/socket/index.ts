@@ -79,6 +79,9 @@ export function registerSocketHandlers(io: Server) {
   io.on("connection", (socket) => {
     let joinedCode: string | null = null;
     let roomPassword: string | undefined;
+    let joinedRole: "viewer" | "editor" = "editor";
+
+    const isViewer = () => joinedRole === "viewer";
 
     socket.on(
       "room:join",
@@ -86,10 +89,12 @@ export function registerSocketHandlers(io: Server) {
         uniqueCode,
         userId,
         password,
+        role,
       }: {
         uniqueCode: string;
         userId: string;
         password?: string;
+        role?: "viewer" | "editor";
       }) => {
         if (!uniqueCode || !userId) return;
 
@@ -109,6 +114,7 @@ export function registerSocketHandlers(io: Server) {
 
         joinedCode = uniqueCode;
         roomPassword = password;
+        joinedRole = role === "viewer" ? "viewer" : "editor";
         const room = roomKey(uniqueCode);
         socket.join(room);
 
@@ -133,6 +139,7 @@ export function registerSocketHandlers(io: Server) {
       if (joinedCode === uniqueCode) {
         joinedCode = null;
         roomPassword = undefined;
+        joinedRole = "editor";
       }
     });
 
@@ -145,6 +152,7 @@ export function registerSocketHandlers(io: Server) {
         ops: unknown[];
         code?: string;
       }) => {
+        if (isViewer()) return;
         if (!payload.uniqueCode || !payload.ops) return;
         if (joinedCode !== payload.uniqueCode) return;
         socket.to(roomKey(payload.uniqueCode)).emit("doc:ops", payload);
@@ -158,6 +166,7 @@ export function registerSocketHandlers(io: Server) {
         code: string;
         senderId: string;
       }) => {
+        if (isViewer()) return;
         if (!payload.uniqueCode || payload.code === undefined) return;
         if (joinedCode !== payload.uniqueCode) return;
         socket
@@ -177,6 +186,7 @@ export function registerSocketHandlers(io: Server) {
         userId: string;
         selection: UserSelection | null;
       }) => {
+        if (isViewer()) return;
         if (!uniqueCode || !userId) return;
         if (joinedCode !== uniqueCode) return;
 
@@ -206,6 +216,7 @@ export function registerSocketHandlers(io: Server) {
         senderId?: string;
         password?: string;
       }) => {
+        if (isViewer()) return;
         if (!uniqueCode || code === undefined) return;
         if (joinedCode !== uniqueCode) return;
 
@@ -246,6 +257,7 @@ export function registerSocketHandlers(io: Server) {
         code: string;
         senderId?: string;
       }) => {
+        if (isViewer()) return;
         if (!uniqueCode || code === undefined) return;
         if (joinedCode !== uniqueCode) return;
         socket.to(roomKey(uniqueCode)).emit("snippet:updated", { code, senderId });

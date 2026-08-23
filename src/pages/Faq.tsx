@@ -49,6 +49,21 @@ export default function Faq() {
           />
 
           <FAQItem
+            q="What is edit link and view-only link?"
+            a={
+              <>
+                Edit link is like{" "}
+                <code className="text-xs">liveshare.dev/abc123</code> — people
+                can type and change code. View-only link is like{" "}
+                <code className="text-xs">liveshare.dev/r/abc123</code> — they
+                can see live updates but cannot edit. Use Share button to copy
+                both. If room has password, viewer also need password to open,
+                then still stay read-only.
+              </>
+            }
+          />
+
+          <FAQItem
             q="How long shared sessions last?"
             a={
               <>

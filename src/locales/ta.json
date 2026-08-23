@@ -113,7 +113,7 @@
     "howToLiveShare": "How to Live Share",
     "features": "Features",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - Free Online Code Editor and Live Code Sharing Platform"
+    "copyright": "© 2026 Live Share - Free Online Code Editor and Live Code Sharing Platform"
   },
   "editor": {
     "language": "Language",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "Code snippet load ஆகல. மறுபடி try பண்ணுங்க.",
     "errorCreateSnippet": "Code snippet create ஆகல. மறுபடி try பண்ணுங்க.",
     "errorSaveSnippet": "Changes save ஆகல. Connection check பண்ணுங்க.",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "Code Protected!",
     "codeProtectedDesc": "Access கொடுக்க people-க்கு password share பண்ணுங்க.",
     "protectionRemovedTitle": "Protection remove ஆச்சு",
@@ -161,7 +162,12 @@
     "collabLeft": "Collaborator போய்ட்டாங்க",
     "collabsLeft": "Collaborators போய்ட்டாங்க",
     "startedCollab": "work start பண்ணினாங்க",
-    "stoppedCollab": "work stop பண்ணினாங்க"
+    "stoppedCollab": "work stop பண்ணினாங்க",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "உங்க feedback வேணும்",

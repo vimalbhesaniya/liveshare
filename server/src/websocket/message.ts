@@ -7,6 +7,7 @@ import {
 } from "../lib/password.js";
 import {
   broadcastToRoom,
+  getConnection,
   syncPresence,
   updateConnection,
   wsEndpoint,
@@ -28,6 +29,7 @@ type WsBody = {
   baseLength?: number;
   ops?: TextOp[];
   password?: string;
+  role?: "viewer" | "editor";
 };
 
 async function assertRoomAccess(uniqueCode: string, password?: string) {
@@ -36,6 +38,11 @@ async function assertRoomAccess(uniqueCode: string, password?: string) {
   const hash = resolvePasswordHash(snippet.password_hash, snippet.code);
   if (!hash) return true;
   return Boolean(password && verifyPassword(password, hash));
+}
+
+async function isViewerConnection(connectionId: string) {
+  const conn = await getConnection(connectionId);
+  return conn?.role === "viewer";
 }
 
 export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
@@ -66,6 +73,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
         roomCode: body.uniqueCode,
         userId: body.userId,
         selection: null,
+        role: body.role === "viewer" ? "viewer" : "editor",
       });
       await syncPresence(endpoint, body.uniqueCode);
       break;
@@ -76,12 +84,14 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
       await updateConnection(connectionId, {
         roomCode: "none",
         selection: null,
+        role: "editor",
       });
       await syncPresence(endpoint, body.uniqueCode);
       break;
     }
 
     case "doc:ops": {
+      if (await isViewerConnection(connectionId)) break;
       if (!body.uniqueCode || !body.ops) break;
       await broadcastToRoom(
         endpoint,
@@ -100,6 +110,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "code:change": {
+      if (await isViewerConnection(connectionId)) break;
       if (!body.uniqueCode || body.code === undefined) break;
       await broadcastToRoom(
         endpoint,
@@ -116,6 +127,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "selection:change": {
+      if (await isViewerConnection(connectionId)) break;
       if (!body.uniqueCode || !body.userId) break;
       await updateConnection(connectionId, {
         selection: body.selection ?? null,
@@ -125,6 +137,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "snippet:save": {
+      if (await isViewerConnection(connectionId)) break;
       if (!body.uniqueCode || body.code === undefined) break;
       try {
         const allowed = await assertRoomAccess(body.uniqueCode, body.password);
@@ -149,6 +162,7 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     case "snippet:sync": {
+      if (await isViewerConnection(connectionId)) break;
       if (!body.uniqueCode || body.code === undefined) break;
       await broadcastToRoom(
         endpoint,

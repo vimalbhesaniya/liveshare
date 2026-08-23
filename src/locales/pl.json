@@ -113,7 +113,7 @@
     "howToLiveShare": "Jak robić Live Share",
     "features": "Funkcje",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share — darmowy edytor kodu online i platforma live code sharing"
+    "copyright": "© 2026 Live Share — darmowy edytor kodu online i platforma live code sharing"
   },
   "editor": {
     "language": "Język",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "Nie udało się wczytać fragmentu kodu. Spróbuj ponownie.",
     "errorCreateSnippet": "Nie udało się utworzyć fragmentu kodu. Spróbuj ponownie.",
     "errorSaveSnippet": "Nie udało się zapisać zmian. Sprawdź połączenie.",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "Kod chroniony!",
     "codeProtectedDesc": "Podaj hasło osobom, którym chcesz dać dostęp.",
     "protectionRemovedTitle": "Ochrona usunięta",
@@ -161,7 +162,12 @@
     "collabLeft": "Ktoś wyszedł",
     "collabsLeft": "Kilka osób wyszło",
     "startedCollab": "zaczął pracować",
-    "stoppedCollab": "przestał pracować"
+    "stoppedCollab": "przestał pracować",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "Chcemy twojej opinii",

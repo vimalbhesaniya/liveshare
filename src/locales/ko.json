@@ -113,7 +113,7 @@
     "howToLiveShare": "라이브 공유 방법",
     "features": "기능",
     "liveShareDev": "Live Share.dev",
-    "copyright": "© 2025 Live Share - 무료 온라인 코드 에디터 & 라이브 코드 공유 플랫폼"
+    "copyright": "© 2026 Live Share - 무료 온라인 코드 에디터 & 라이브 코드 공유 플랫폼"
   },
   "editor": {
     "language": "언어",
@@ -141,6 +141,7 @@
     "errorLoadSnippet": "코드 스니펫을 불러올 수 없었어요. 다시 시도해 주세요.",
     "errorCreateSnippet": "코드 스니펫을 만들 수 없었어요. 다시 시도해 주세요.",
     "errorSaveSnippet": "변경 사항을 저장할 수 없었어요. 연결을 확인해 주세요.",
+    "errorSnippetNotFound": "This code room not found. Ask for edit link first.",
     "codeProtectedTitle": "코드 보호됨!",
     "codeProtectedDesc": "접근을 허용할 사람에게 비밀번호를 공유하세요.",
     "protectionRemovedTitle": "보호 해제됨",
@@ -161,7 +162,12 @@
     "collabLeft": "참가자가 나갔어요",
     "collabsLeft": "참가자들이 나갔어요",
     "startedCollab": "작업 시작",
-    "stoppedCollab": "작업 중지"
+    "stoppedCollab": "작업 중지",
+    "viewOnly": "View only",
+    "copyEditLink": "Copy edit link",
+    "copyViewLink": "Copy view-only link",
+    "editLinkCopiedDesc": "Send this link so others can join and edit.",
+    "viewLinkCopiedDesc": "Send this link so others can watch only, not edit."
   },
   "feedback": {
     "title": "피드백을 받고 싶어요",
