@@ -6,6 +6,7 @@ import {
   stripPasswordFromCode,
   verifyPassword,
 } from "../lib/password.js";
+import { makeViewToken, resolveViewToken } from "../lib/view-token.js";
 
 const router = Router();
 
@@ -23,16 +24,18 @@ function authPasswordFromRequest(req: {
 
 function publicSnippet(
   snippet: store.SnippetRecord,
-  opts?: { includeCode?: boolean },
+  opts?: { includeCode?: boolean; includeUniqueCode?: boolean },
 ) {
   const protected_ = Boolean(snippet.password_hash);
+  const includeUniqueCode = opts?.includeUniqueCode !== false;
   return {
     id: snippet.id,
-    unique_code: snippet.unique_code,
+    ...(includeUniqueCode ? { unique_code: snippet.unique_code } : {}),
     language: snippet.language,
     created_at: snippet.created_at,
     updated_at: snippet.updated_at,
     password_protected: protected_,
+    view_token: makeViewToken(snippet.unique_code),
     code:
       opts?.includeCode === false
         ? ""
@@ -57,8 +60,57 @@ async function maybeUpgradeLegacyHash(
   snippet.code = stripPasswordFromCode(snippet.code);
 }
 
+/** View-only load by signed token — does not expose unique_code (edit id). */
+router.get("/view/:viewToken", async (req, res) => {
+  try {
+    const uniqueCode = resolveViewToken(req.params.viewToken);
+    if (!uniqueCode) {
+      res.status(404).json({ error: "Snippet not found" });
+      return;
+    }
+
+    const snippet = await store.getSnippet(uniqueCode);
+    if (!snippet) {
+      res.status(404).json({ error: "Snippet not found" });
+      return;
+    }
+
+    const pwdHash = resolvePasswordHash(snippet.password_hash, snippet.code);
+    snippet.password_hash = pwdHash;
+
+    if (pwdHash) {
+      const provided = authPasswordFromRequest(req);
+      if (!provided || !verifyPassword(provided, pwdHash)) {
+        res.status(401).json({
+          password_required: true,
+          id: snippet.id,
+          language: snippet.language,
+          access: "view",
+          error: "Password required",
+        });
+        return;
+      }
+      await maybeUpgradeLegacyHash(snippet, provided);
+    }
+
+    res.json({
+      ...publicSnippet(snippet, { includeUniqueCode: false }),
+      access: "view",
+    });
+  } catch (err) {
+    console.error("GET view snippet error:", err);
+    res.status(500).json({ error: "Failed to load snippet" });
+  }
+});
+
 router.get("/:uniqueCode", async (req, res) => {
   try {
+    // Never treat a view token as an editable room id
+    if (resolveViewToken(req.params.uniqueCode)) {
+      res.status(404).json({ error: "Snippet not found" });
+      return;
+    }
+
     const snippet = await store.getSnippet(req.params.uniqueCode);
 
     if (!snippet) {

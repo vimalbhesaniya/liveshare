@@ -5,6 +5,7 @@ import {
   resolvePasswordHash,
   verifyPassword,
 } from "../lib/password.js";
+import { resolveViewToken } from "../lib/view-token.js";
 import {
   broadcastToRoom,
   getConnection,
@@ -30,6 +31,7 @@ type WsBody = {
   ops?: TextOp[];
   password?: string;
   role?: "viewer" | "editor";
+  viewToken?: string;
 };
 
 async function assertRoomAccess(uniqueCode: string, password?: string) {
@@ -64,18 +66,30 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
 
   switch (action) {
     case "room:join": {
-      if (!body.uniqueCode || !body.userId) break;
-      const allowed = await assertRoomAccess(body.uniqueCode, body.password);
+      let roomCode = body.uniqueCode;
+      let forcedViewer = false;
+
+      if (body.viewToken) {
+        const resolved = resolveViewToken(body.viewToken);
+        if (!resolved) {
+          return { statusCode: 404, body: "Invalid view link" };
+        }
+        roomCode = resolved;
+        forcedViewer = true;
+      }
+
+      if (!roomCode || !body.userId) break;
+      const allowed = await assertRoomAccess(roomCode, body.password);
       if (!allowed) {
         return { statusCode: 401, body: "Password required" };
       }
       await updateConnection(connectionId, {
-        roomCode: body.uniqueCode,
+        roomCode,
         userId: body.userId,
         selection: null,
-        role: body.role === "viewer" ? "viewer" : "editor",
+        role: forcedViewer || body.role === "viewer" ? "viewer" : "editor",
       });
-      await syncPresence(endpoint, body.uniqueCode);
+      await syncPresence(endpoint, roomCode);
       break;
     }
 

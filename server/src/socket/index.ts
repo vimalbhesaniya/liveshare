@@ -4,6 +4,7 @@ import {
   resolvePasswordHash,
   verifyPassword,
 } from "../lib/password.js";
+import { resolveViewToken } from "../lib/view-token.js";
 
 type UserSelection = {
   userId: string;
@@ -87,35 +88,56 @@ export function registerSocketHandlers(io: Server) {
       "room:join",
       async ({
         uniqueCode,
+        viewToken,
         userId,
         password,
         role,
       }: {
-        uniqueCode: string;
+        uniqueCode?: string;
+        viewToken?: string;
         userId: string;
         password?: string;
         role?: "viewer" | "editor";
       }) => {
-        if (!uniqueCode || !userId) return;
+        if (!userId) return;
 
-        const access = await assertRoomAccess(uniqueCode, password);
+        let roomCode = uniqueCode;
+        let forcedViewer = false;
+
+        if (viewToken) {
+          const resolved = resolveViewToken(viewToken);
+          if (!resolved) {
+            socket.emit("room:error", {
+              uniqueCode: viewToken,
+              error: "Invalid view link",
+              password_required: false,
+            });
+            return;
+          }
+          roomCode = resolved;
+          forcedViewer = true;
+        }
+
+        if (!roomCode) return;
+
+        const access = await assertRoomAccess(roomCode, password);
         if (!access.ok) {
           socket.emit("room:error", {
-            uniqueCode,
+            uniqueCode: viewToken || roomCode,
             error: access.error,
             password_required: true,
           });
           return;
         }
 
-        if (joinedCode && joinedCode !== uniqueCode) {
+        if (joinedCode && joinedCode !== roomCode) {
           removeFromRoom(io, socket, joinedCode);
         }
 
-        joinedCode = uniqueCode;
+        joinedCode = roomCode;
         roomPassword = password;
-        joinedRole = role === "viewer" ? "viewer" : "editor";
-        const room = roomKey(uniqueCode);
+        joinedRole = forcedViewer || role === "viewer" ? "viewer" : "editor";
+        const room = roomKey(roomCode);
         socket.join(room);
 
         if (!roomPresence.has(room)) {
@@ -128,19 +150,20 @@ export function registerSocketHandlers(io: Server) {
           selection: null,
         });
 
-        broadcastPresence(io, uniqueCode);
-        socket.emit("room:joined", { uniqueCode });
+        broadcastPresence(io, roomCode);
+        // Never echo the edit room id to forced viewers
+        socket.emit("room:joined", {
+          uniqueCode: forcedViewer ? viewToken! : roomCode,
+        });
       },
     );
 
-    socket.on("room:leave", ({ uniqueCode }: { uniqueCode: string }) => {
-      if (!uniqueCode) return;
-      removeFromRoom(io, socket, uniqueCode);
-      if (joinedCode === uniqueCode) {
-        joinedCode = null;
-        roomPassword = undefined;
-        joinedRole = "editor";
-      }
+    socket.on("room:leave", (_payload?: { uniqueCode?: string }) => {
+      if (!joinedCode) return;
+      removeFromRoom(io, socket, joinedCode);
+      joinedCode = null;
+      roomPassword = undefined;
+      joinedRole = "editor";
     });
 
     socket.on(
@@ -154,8 +177,9 @@ export function registerSocketHandlers(io: Server) {
       }) => {
         if (isViewer()) return;
         if (!payload.uniqueCode || !payload.ops) return;
-        if (joinedCode !== payload.uniqueCode) return;
-        socket.to(roomKey(payload.uniqueCode)).emit("doc:ops", payload);
+        if (!joinedCode) return;
+        if (payload.uniqueCode && payload.uniqueCode !== joinedCode) return;
+        socket.to(roomKey(joinedCode)).emit("doc:ops", { ...payload, uniqueCode: joinedCode });
       },
     );
 
@@ -168,10 +192,11 @@ export function registerSocketHandlers(io: Server) {
       }) => {
         if (isViewer()) return;
         if (!payload.uniqueCode || payload.code === undefined) return;
-        if (joinedCode !== payload.uniqueCode) return;
+        if (!joinedCode) return;
+        if (payload.uniqueCode && payload.uniqueCode !== joinedCode) return;
         socket
-          .to(roomKey(payload.uniqueCode))
-          .emit("code:change", payload);
+          .to(roomKey(joinedCode))
+          .emit("code:change", { ...payload, uniqueCode: joinedCode });
       },
     );
 
@@ -188,9 +213,10 @@ export function registerSocketHandlers(io: Server) {
       }) => {
         if (isViewer()) return;
         if (!uniqueCode || !userId) return;
-        if (joinedCode !== uniqueCode) return;
+        if (!joinedCode || joinedCode !== uniqueCode) return;
+        if (isViewer()) return;
 
-        const room = roomKey(uniqueCode);
+        const room = roomKey(joinedCode);
         const presence = roomPresence.get(room);
         const entry = presence?.get(socket.id);
 

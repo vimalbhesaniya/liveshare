@@ -2,10 +2,12 @@ import { API_BASE } from "./config";
 
 export type SnippetRecord = {
   id: string;
-  unique_code: string;
+  unique_code?: string;
   code: string;
   language: string;
   password_protected?: boolean;
+  view_token?: string;
+  access?: "view" | "edit";
   created_at?: string;
   updated_at?: string;
 };
@@ -73,6 +75,23 @@ export async function getSnippet(uniqueCode: string, password?: string | null) {
   return request<SnippetRecord>(`/api/snippets/${uniqueCode}`, {
     headers: authHeaders(password),
   });
+}
+
+export async function getSnippetByViewToken(
+  viewToken: string,
+  password?: string | null,
+) {
+  return request<SnippetRecord>(
+    `/api/snippets/view/${encodeURIComponent(viewToken)}`,
+    {
+      headers: authHeaders(password),
+    },
+  );
+}
+
+export function isViewTokenFormat(code: string): boolean {
+  const parts = code.split(".");
+  return parts.length === 2 && Boolean(parts[0] && parts[1]);
 }
 
 export async function unlockSnippet(uniqueCode: string, password: string) {

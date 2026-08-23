@@ -29,11 +29,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   getSnippet,
+  getSnippetByViewToken,
   createSnippet,
   updateSnippet,
   saveSnippetKeepalive,
   unlockSnippet,
   isPasswordRequiredResponse,
+  isViewTokenFormat,
 } from "@/lib/api";
 import { getRealtime, type RealtimeLike } from "@/lib/realtime";
 import {
@@ -141,6 +143,7 @@ const EditorPage = () => {
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
   const [showRetentionPrompt, setShowRetentionPrompt] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [viewToken, setViewToken] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(() => {
     const saved = localStorage.getItem("liveshare-font-size");
     return saved ? parseInt(saved, 10) : 14;
@@ -189,6 +192,15 @@ const EditorPage = () => {
   sessionPasswordRef.current = sessionPassword;
   isAuthenticatedRef.current = isAuthenticated;
   readOnlyRef.current = readOnly;
+
+  // View tokens must never open as edit rooms (stripping /r stays view-only)
+  useEffect(() => {
+    if (!urlCode) return;
+    if (!readOnly && isViewTokenFormat(urlCode)) {
+      navigate(`/r/${urlCode}`, { replace: true });
+    }
+  }, [urlCode, readOnly, navigate]);
+
 
   const LARGE_FILE_CHAR_THRESHOLD = 100000;
   const isLargeFile = codeLength > LARGE_FILE_CHAR_THRESHOLD;
@@ -343,9 +355,12 @@ const EditorPage = () => {
         code: string;
         language: string;
         password_protected?: boolean;
+        view_token?: string;
+        unique_code?: string;
       },
       password?: string | null,
     ) => {
+      if (data.view_token) setViewToken(data.view_token);
       setSnippetId(data.id);
       const loaded = data.code || "";
       lastSyncedCodeRef.current = loaded;
@@ -380,10 +395,14 @@ const EditorPage = () => {
       }
 
       const savedPwd = sessionStorage.getItem(`liveshare-pwd:${uniqueCode}`);
-      const { data, error, status, raw } = await getSnippet(
-        uniqueCode,
-        savedPwd,
-      );
+      const useViewToken = readOnly && isViewTokenFormat(uniqueCode);
+      const { data, error, status, raw } = useViewToken
+        ? await getSnippetByViewToken(uniqueCode, savedPwd)
+        : await getSnippet(uniqueCode, savedPwd);
+
+      if (useViewToken) {
+        setViewToken(uniqueCode);
+      }
 
       if (status === 401 || isPasswordRequiredResponse(raw)) {
         setSnippetId(
@@ -410,7 +429,16 @@ const EditorPage = () => {
 
       if (data && status !== 404) {
         applyLoadedSnippet(data, savedPwd);
-      } else if (readOnly) {
+        if (
+          readOnly &&
+          !isViewTokenFormat(uniqueCode) &&
+          data.view_token
+        ) {
+          // Upgrade legacy /r/{editCode} to opaque view token URL
+          navigate(`/r/${data.view_token}`, { replace: true });
+          return;
+        }
+      } else if (readOnly || isViewTokenFormat(uniqueCode)) {
         toast({
           title: t("editor.errorTitle"),
           description: t("editor.errorSnippetNotFound"),
@@ -538,10 +566,15 @@ const EditorPage = () => {
     };
 
     const joinRoom = () => {
+      const asViewer = readOnlyRef.current;
+      const token =
+        asViewer && urlCode && isViewTokenFormat(urlCode) ? urlCode : null;
       socket.emit("room:join", {
-        uniqueCode: urlCode,
+        ...(token
+          ? { viewToken: token }
+          : { uniqueCode: urlCode }),
         userId: myUserId,
-        role: readOnlyRef.current ? "viewer" : "editor",
+        role: asViewer ? "viewer" : "editor",
         ...(sessionPasswordRef.current
           ? { password: sessionPasswordRef.current }
           : {}),
@@ -735,6 +768,13 @@ const EditorPage = () => {
 
   const handlePasswordSubmit = async (password: string): Promise<boolean> => {
     if (!urlCode) return false;
+    if (readOnly && isViewTokenFormat(urlCode)) {
+      const { data, error } = await getSnippetByViewToken(urlCode, password);
+      if (error || !data) return false;
+      applyLoadedSnippet(data, password);
+      setViewToken(urlCode);
+      return true;
+    }
     const { data, error } = await unlockSnippet(urlCode, password);
     if (error || !data) return false;
     applyLoadedSnippet(data, password);
@@ -930,15 +970,17 @@ const EditorPage = () => {
 
   const getShareLinks = () => {
     const origin = window.location.origin;
-    const code = urlCode ?? "";
+    const editCode = urlCode && !isViewTokenFormat(urlCode) ? urlCode : "";
+    const viewCode = viewToken || (urlCode && isViewTokenFormat(urlCode) ? urlCode : "");
     return {
-      editUrl: `${origin}/${code}`,
-      viewUrl: `${origin}/r/${code}`,
+      editUrl: editCode ? `${origin}/${editCode}` : "",
+      viewUrl: viewCode ? `${origin}/r/${viewCode}` : "",
     };
   };
 
   const handleCopyEditLink = () => {
     const { editUrl } = getShareLinks();
+    if (!editUrl) return;
     navigator.clipboard.writeText(editUrl);
     setShareOpen(false);
     toast({
@@ -954,6 +996,7 @@ const EditorPage = () => {
 
   const handleCopyViewLink = () => {
     const { viewUrl } = getShareLinks();
+    if (!viewUrl) return;
     navigator.clipboard.writeText(viewUrl);
     setShareOpen(false);
     toast({
@@ -1151,14 +1194,16 @@ const EditorPage = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-2">
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
-                  onClick={handleCopyEditLink}
-                >
-                  <Link2 className="h-4 w-4 shrink-0" />
-                  {t("editor.copyEditLink")}
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    onClick={handleCopyEditLink}
+                  >
+                    <Link2 className="h-4 w-4 shrink-0" />
+                    {t("editor.copyEditLink")}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"

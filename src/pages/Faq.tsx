@@ -55,10 +55,12 @@ export default function Faq() {
                 Edit link is like{" "}
                 <code className="text-xs">liveshare.dev/abc123</code> — people
                 can type and change code. View-only link is like{" "}
-                <code className="text-xs">liveshare.dev/r/abc123</code> — they
-                can see live updates but cannot edit. Use Share button to copy
-                both. If room has password, viewer also need password to open,
-                then still stay read-only.
+                <code className="text-xs">liveshare.dev/r/…</code> with special
+                view code — they can see live updates but cannot edit. View link
+                is different from edit link, so removing{" "}
+                <code className="text-xs">/r</code> from URL will not open edit
+                mode. Use Share button to copy both. If room has password, viewer
+                also need password to open, then still stay read-only.
               </>
             }
           />
