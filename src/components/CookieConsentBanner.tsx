@@ -44,12 +44,14 @@ export function CookieConsentBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-[100] px-3 pb-3">
-      <div className="mx-auto max-w-4xl rounded-xl border border-border bg-background/95 backdrop-blur p-4 shadow-lg">
+    <div className="fixed bottom-0 inset-x-0 z-[100] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-4xl rounded-xl border border-border bg-background/95 backdrop-blur p-3 sm:p-4 shadow-lg">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-semibold">Cookies and privacy</p>
-            <p className="text-sm text-muted-foreground mt-1">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm sm:text-base">
+              Cookies and privacy
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
               We use cookies and similar things to run site and improve
               performance. If you accept analytics and ad cookies, we may use
               Google services (including analytics and AdSense).{" "}
@@ -63,15 +65,15 @@ export function CookieConsentBanner() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto shrink-0">
             <Button
               variant="outline"
               onClick={reject}
-              className="whitespace-nowrap"
+              className="flex-1 sm:flex-none"
             >
               Reject
             </Button>
-            <Button onClick={accept} className="whitespace-nowrap">
+            <Button onClick={accept} className="flex-1 sm:flex-none">
               Accept
             </Button>
           </div>
@@ -80,4 +82,3 @@ export function CookieConsentBanner() {
     </div>
   );
 }
-

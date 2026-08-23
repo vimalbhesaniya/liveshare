@@ -23,7 +23,7 @@ export default function Faq() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="container mx-auto px-6 pt-[5.5rem] sm:pt-20 pb-12">
+      <main className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
         <h1 className="text-3xl sm:text-4xl font-bold mb-6">FAQ</h1>
 
         <div className="grid gap-4 max-w-4xl">

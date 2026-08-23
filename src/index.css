@@ -157,6 +157,11 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
       sans-serif;
+    overflow-x: hidden;
+  }
+
+  html {
+    overflow-x: hidden;
   }
 
   .hero-gradient {
@@ -664,20 +669,21 @@ a:not(button):not(.no-hover-effect):hover {
 
 @media (max-width: 640px) {
   .whatsapp-float {
-    right: 1rem;
-    bottom: 1rem;
-    width: 3.4rem;
-    height: 3.4rem;
+    right: 0.85rem;
+    /* Keep above cookie banner / safe area on phones */
+    bottom: max(5.5rem, calc(1rem + env(safe-area-inset-bottom)));
+    width: 3.25rem;
+    height: 3.25rem;
   }
 
   .whatsapp-float__btn {
-    width: 3.4rem;
-    height: 3.4rem;
+    width: 3.25rem;
+    height: 3.25rem;
   }
 
   .whatsapp-float__icon {
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.55rem;
+    height: 1.55rem;
   }
 
   .whatsapp-float__tooltip {

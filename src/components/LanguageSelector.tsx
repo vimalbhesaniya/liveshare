@@ -21,16 +21,18 @@ export function LanguageSelector() {
   return (
     <Select value={i18n.language} onValueChange={handleLanguageChange}>
       <SelectTrigger
-        className="w-auto gap-1.5 px-2 sm:px-3 h-9 border-border/60 bg-background/50 hover:bg-accent/50 transition-colors"
+        className="w-auto min-w-0 max-w-[7.5rem] sm:max-w-none gap-1 sm:gap-1.5 px-1.5 sm:px-3 h-9 border-border/60 bg-background/50 hover:bg-accent/50 transition-colors"
         aria-label="Select language"
       >
-        <Globe className="h-4 w-4 text-muted-foreground" />
+        <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
         <SelectValue>
-          <span className="hidden sm:inline text-sm">{currentLang.flag} {currentLang.nativeName}</span>
+          <span className="hidden sm:inline text-sm truncate">
+            {currentLang.flag} {currentLang.nativeName}
+          </span>
           <span className="sm:hidden text-sm">{currentLang.flag}</span>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="max-h-[400px] min-w-[200px]">
+      <SelectContent className="max-h-[min(400px,70vh)] min-w-[200px] w-[var(--radix-select-trigger-width)] sm:w-auto">
         {languages.map((lang) => (
           <SelectItem
             key={lang.code}

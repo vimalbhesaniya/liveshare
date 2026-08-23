@@ -24,7 +24,7 @@ export function RetentionPrompt({
 
   return (
     <div
-      className="fixed bottom-6 left-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-md sm:left-6"
+      className="fixed bottom-24 left-3 z-50 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-md sm:bottom-6 sm:left-6"
       role="dialog"
       aria-label={t("retention.title")}
     >

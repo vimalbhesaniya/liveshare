@@ -83,23 +83,23 @@ const Index = () => {
       {/* Hero Section */}
       <section className="hero-gradient relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
-        <div className="container mx-auto px-6 pt-32 pb-24 relative">
+        <div className="container mx-auto px-4 sm:px-6 pt-28 sm:pt-32 pb-16 sm:pb-24 relative">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="scroll-animate animate-in text-3xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight">
+            <h1 className="scroll-animate animate-in text-3xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent leading-tight px-1">
               {t("hero.title")}
             </h1>
-            <h2 className="scroll-animate animate-in delay-1 text-lg md:text-2xl font-normal text-muted-foreground mb-10 leading-relaxed">
+            <h2 className="scroll-animate animate-in delay-1 text-base sm:text-lg md:text-2xl font-normal text-muted-foreground mb-8 sm:mb-10 leading-relaxed px-1">
               {t("hero.subtitle")}
             </h2>
-            <div className="scroll-animate animate-in delay-2 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="scroll-animate animate-in delay-2 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full">
               <Button
                 onClick={navigateToRandomEditor}
                 size="lg"
-                className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 {t("hero.cta")}
               </Button>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground text-center">
                 {t("hero.ctaSubtext")}
               </p>
             </div>
@@ -108,13 +108,13 @@ const Index = () => {
       </section>
 
       {/* Primary search intent: share code online */}
-      <section id="share-code-online" className="py-24">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center mb-14">
-            <h2 className="scroll-animate text-3xl md:text-4xl font-bold mb-4">
+      <section id="share-code-online" className="py-16 sm:py-24">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="max-w-3xl mx-auto text-center mb-10 sm:mb-14">
+            <h2 className="scroll-animate text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
               {t("searchIntent.title")}
             </h2>
-            <p className="scroll-animate delay-1 text-muted-foreground text-lg mb-6">
+            <p className="scroll-animate delay-1 text-muted-foreground text-base sm:text-lg mb-6">
               {t("searchIntent.subtitle")}
             </p>
             <p className="scroll-animate delay-2 text-muted-foreground leading-relaxed">
@@ -162,8 +162,8 @@ const Index = () => {
       </section>
 
       {/* How to Use LiveShare */}
-      <section id="how-it-works" className="py-24 bg-card/30">
-        <div className="container mx-auto px-6">
+      <section id="how-it-works" className="py-16 sm:py-24 bg-card/30">
+        <div className="container mx-auto px-4 sm:px-6">
           <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-center mb-4">
             {t("howItWorks.title")}
           </h2>
@@ -255,7 +255,7 @@ const Index = () => {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-24 container mx-auto px-6">
+      <section id="features" className="py-16 sm:py-24 container mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="scroll-animate delay-0">
             <FeatureCard
@@ -282,8 +282,8 @@ const Index = () => {
       </section>
 
       {/* Additional Features */}
-      <section className="py-24 bg-card/30">
-        <div className="container mx-auto px-6">
+      <section className="py-16 sm:py-24 bg-card/30">
+        <div className="container mx-auto px-4 sm:px-6">
           <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-center mb-16">
             {t("whyChoose.title")}
           </h2>
@@ -314,42 +314,42 @@ const Index = () => {
       </section>
 
       {/* Hero CTA with Interactive Elements */}
-      <section className="relative py-32 overflow-hidden">
+      <section className="relative py-16 sm:py-24 md:py-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-background" />
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 sm:w-80 sm:h-80 bg-accent/5 rounded-full blur-3xl animate-pulse delay-1000" />
         </div>
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="max-w-5xl mx-auto">
-            <div className="scroll-animate text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm mb-6">
+            <div className="scroll-animate text-center mb-10 sm:mb-16">
+              <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-4 sm:mb-6">
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 {t("cta.badge")}
               </div>
-              <h2 className="text-4xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent leading-tight px-1">
                 {t("cta.title1")}
                 <br />
                 {t("cta.title2")}
               </h2>
-              <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-base sm:text-xl md:text-2xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed px-1">
                 {t("cta.subtitle")}
                 <span className="text-primary font-semibold">
                   {" "}{t("cta.noSetup")}
                 </span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
                 <Button
                   onClick={navigateToRandomEditor}
                   size="lg"
-                  className="text-lg px-8 py-6 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-xl shadow-primary/25 transform hover:scale-105 transition-all duration-200"
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-xl shadow-primary/25 transform hover:scale-105 transition-all duration-200"
                 >
-                  <Zap className="w-5 h-5 mr-2" />
+                  <Zap className="w-5 h-5 mr-2 shrink-0" />
                   {t("cta.button")}
                 </Button>
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Users className="w-4 h-4" />
+                  <Users className="w-4 h-4 shrink-0" />
                   {t("cta.joinDevs")}
                 </div>
               </div>
@@ -357,25 +357,25 @@ const Index = () => {
 
             {/* Interactive Demo Preview */}
             <div className="scroll-animate delay-1 relative max-w-4xl mx-auto">
-              <div className="bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
+              <div className="bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-4 sm:p-6 shadow-2xl overflow-hidden">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex -space-x-2 shrink-0">
                       <div className="w-8 h-8 bg-green-500 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold text-white">A</div>
                       <div className="w-8 h-8 bg-blue-500 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold text-white">B</div>
                       <div className="w-8 h-8 bg-purple-500 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold text-white">C</div>
                     </div>
-                    <span className="text-sm text-muted-foreground">{t("cta.collabCount")}</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground truncate">{t("cta.collabCount")}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-green-500">
+                  <div className="flex items-center gap-2 text-green-500 shrink-0">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     <span className="text-sm font-medium">{t("cta.live")}</span>
                   </div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 font-mono text-sm">
+                <div className="bg-muted/50 rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm overflow-x-auto">
                   <div className="text-muted-foreground">{t("cta.codeComment")}</div>
-                  <div className="text-primary">function <span className="text-foreground">collaborate</span>() {"{"}</div>
-                  <div className="ml-4 text-accent">console.log(<span className="text-green-500">"Hello World!"</span>);</div>
+                  <div className="text-primary whitespace-nowrap">function <span className="text-foreground">collaborate</span>() {"{"}</div>
+                  <div className="ml-4 text-accent whitespace-nowrap">console.log(<span className="text-green-500">"Hello World!"</span>);</div>
                   <div className="text-primary">{"}"}</div>
                 </div>
               </div>
@@ -385,16 +385,16 @@ const Index = () => {
       </section>
 
       {/* Why Choose Live Share - Interactive Cards */}
-      <section className="py-24 bg-card/20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="scroll-animate text-3xl md:text-5xl font-bold mb-4">{t("whyDevs.title")}</h2>
-            <p className="scroll-animate delay-1 text-xl text-muted-foreground max-w-2xl mx-auto">{t("whyDevs.subtitle")}</p>
+      <section className="py-16 sm:py-24 bg-card/20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="scroll-animate text-2xl sm:text-3xl md:text-5xl font-bold mb-4">{t("whyDevs.title")}</h2>
+            <p className="scroll-animate delay-1 text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">{t("whyDevs.subtitle")}</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
             <div className="scroll-animate delay-0 group">
-              <div className="bg-card/60 backdrop-blur-sm border border-border rounded-2xl p-8 h-full hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2">
+              <div className="bg-card/60 backdrop-blur-sm border border-border rounded-2xl p-6 sm:p-8 h-full hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2">
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
@@ -431,8 +431,8 @@ const Index = () => {
       </section>
 
       {/* How It Works - Visual Steps */}
-      <section className="py-24">
-        <div className="container mx-auto px-6">
+      <section className="py-16 sm:py-24">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <h2 className="scroll-animate text-3xl md:text-5xl font-bold mb-4">{t("howWorks.title")}</h2>
             <p className="scroll-animate delay-1 text-xl text-muted-foreground">{t("howWorks.subtitle")}</p>
@@ -477,8 +477,8 @@ const Index = () => {
       </section>
 
       {/* Perfect For - Use Cases */}
-      <section className="py-24 bg-card/20">
-        <div className="container mx-auto px-6">
+      <section className="py-16 sm:py-24 bg-card/20">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <h2 className="scroll-animate text-3xl md:text-5xl font-bold mb-4">{t("perfectFor.title")}</h2>
             <p className="scroll-animate delay-1 text-xl text-muted-foreground">{t("perfectFor.subtitle")}</p>

@@ -176,7 +176,7 @@ export default function BlogPost() {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="container mx-auto px-6 pt-[5.5rem] sm:pt-20 pb-12">
+        <main className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
           <h1 className="text-3xl font-bold mb-4">Post not found</h1>
           <p className="text-muted-foreground mb-6">
             This blog post does not exist.
@@ -196,7 +196,7 @@ export default function BlogPost() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="container mx-auto px-6 pt-[5.5rem] sm:pt-20 pb-12">
+      <main className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
         <div className="max-w-3xl">
           <div className="text-sm text-muted-foreground mb-3">{post.date}</div>
           <h1 className="text-3xl sm:text-4xl font-bold mb-6">
