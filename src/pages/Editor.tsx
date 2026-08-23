@@ -55,6 +55,7 @@ import {
   type TextOp,
 } from "@/lib/text-ops";
 import { throttle, debounce } from "@/lib/throttle";
+import { makeViewToken } from "@/lib/view-token";
 import {
   SetPasswordDialog,
   EnterPasswordDialog,
@@ -200,6 +201,21 @@ const EditorPage = () => {
       navigate(`/r/${urlCode}`, { replace: true });
     }
   }, [urlCode, readOnly, navigate]);
+
+  // Keep a view token ready for Share → Copy view-only link
+  useEffect(() => {
+    if (readOnly || !urlCode || isViewTokenFormat(urlCode)) return;
+    if (viewToken) return;
+    let cancelled = false;
+    void (async () => {
+      const token = await makeViewToken(urlCode);
+      if (!cancelled) setViewToken(token);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [urlCode, readOnly, viewToken]);
+
 
 
   const LARGE_FILE_CHAR_THRESHOLD = 100000;
@@ -465,6 +481,7 @@ const EditorPage = () => {
           });
         } else if (newSnippet) {
           setSnippetId(newSnippet.id);
+          if (newSnippet.view_token) setViewToken(newSnippet.view_token);
           setCode(welcome);
           setLanguage("text");
           syncBaseRef.current = welcome;
@@ -994,10 +1011,48 @@ const EditorPage = () => {
     }
   };
 
-  const handleCopyViewLink = () => {
-    const { viewUrl } = getShareLinks();
-    if (!viewUrl) return;
-    navigator.clipboard.writeText(viewUrl);
+  const handleCopyViewLink = async () => {
+    let viewCode =
+      viewToken ||
+      (urlCode && isViewTokenFormat(urlCode) ? urlCode : null);
+
+    if (!viewCode && urlCode && !isViewTokenFormat(urlCode)) {
+      // Prefer server token when available
+      const { data } = await getSnippet(
+        urlCode,
+        sessionPasswordRef.current,
+      );
+      if (data?.view_token) {
+        viewCode = data.view_token;
+      } else {
+        // Always works even if API omits view_token
+        viewCode = await makeViewToken(urlCode);
+      }
+      setViewToken(viewCode);
+    }
+
+    if (!viewCode) {
+      toast({
+        title: t("editor.errorTitle"),
+        description: t("editor.errorLoadSnippet"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const viewUrl = `${window.location.origin}/r/${viewCode}`;
+
+    try {
+      await navigator.clipboard.writeText(viewUrl);
+    } catch {
+      toast({
+        title: t("editor.errorTitle"),
+        description: t("editor.errorLoadSnippet"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setShareOpen(false);
     toast({
       title: t("editor.linkCopiedTitle"),
@@ -1198,6 +1253,7 @@ const EditorPage = () => {
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                    onPointerDown={(e) => e.preventDefault()}
                     onClick={handleCopyEditLink}
                   >
                     <Link2 className="h-4 w-4 shrink-0" />
@@ -1207,7 +1263,8 @@ const EditorPage = () => {
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
-                  onClick={handleCopyViewLink}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => void handleCopyViewLink()}
                 >
                   <Eye className="h-4 w-4 shrink-0" />
                   {t("editor.copyViewLink")}
