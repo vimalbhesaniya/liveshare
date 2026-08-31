@@ -23,6 +23,7 @@ The feedback modal appears when users move their cursor toward the top of the sc
 2. Use these template variables:
    - `{{from_name}}` – user’s name (or "Anonymous")
    - `{{from_email}}` – user’s email (or "not-provided@feedback.local")
+   - `{{reply_to}}` – same as email (used for Reply-To)
    - `{{message}}` – feedback text
 
 3. Example template:
@@ -36,14 +37,23 @@ The feedback modal appears when users move their cursor toward the top of the sc
    {{message}}
    ```
 
-4. Save and copy the **Template ID** (e.g. `template_xxxxx`).
+4. In template settings, set **Reply To** to `{{reply_to}}` (or `{{from_email}}`).
+5. Save and copy the **Template ID** (e.g. `template_xxxxx`).
 
 ### 4. Get Your Public Key
 
 1. Go to **Account** → **General**.
 2. Copy the **Public Key**.
 
-### 5. Add Environment Variables
+### 5. Security (important)
+
+In EmailJS → **Account** → **Security**:
+
+- Allow your domains: `localhost`, `liveshare.dev`, `www.liveshare.dev`
+- Browser form send uses the public key (correct for this app)
+- “API access from non-browser environments” can stay off unless you need server-side sends
+
+### 6. Add Environment Variables
 
 Add these to `.env`:
 
@@ -58,8 +68,17 @@ Restart the dev server after editing `.env`.
 ## Exit Intent Behavior
 
 - **Desktop:** Triggered when the mouse leaves the top of the viewport (cursor moving toward the address bar / tab close).
-- **Tab close / refresh:** Browsers do not allow custom modals during `beforeunload`. The modal is only shown via mouse exit intent.
+- **Mobile:** No mouse exit-intent — users can use WhatsApp float instead. Tab close / refresh cannot show a custom modal (`beforeunload` restriction).
+- Modal is shown **once per browser** (`localStorage` key below).
 
 ## localStorage Key
 
 Shown state is stored under `liveshare-exit-feedback-shown`. Clearing this key will make the modal appear again.
+
+## Quick test
+
+1. DevTools → Application → Local Storage → delete `liveshare-exit-feedback-shown`
+2. Move mouse quickly out through the **top** of the page
+3. Fill message → Submit
+4. Expect thank-you text; check your EmailJS/Gmail inbox
+5. Close modal; reload — modal should **not** appear again until you clear the key
