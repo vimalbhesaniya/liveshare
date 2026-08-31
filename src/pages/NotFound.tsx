@@ -1,8 +1,7 @@
 import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { usePageSeo } from "@/hooks/use-page-seo";
-import { Navigation } from "@/components/Navigation";
-import { SiteFooter } from "@/components/SiteFooter";
 
 const NotFound = () => {
   const location = useLocation();
@@ -10,28 +9,29 @@ const NotFound = () => {
 
   usePageSeo({
     title: "Page not found - LiveShare",
-    description: "This page not found on LiveShare.",
+    description: "The page you are looking for does not exist on LiveShare.",
     canonicalPath: location.pathname || "/",
     robots: "noindex, nofollow",
   });
 
+  useEffect(() => {
+    console.error(
+      "404 Error: User attempted to access non-existent route:",
+      location.pathname,
+    );
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-20 pb-10 sm:pb-12">
-        <div className="flex items-center justify-center">
-          <div className="text-center max-w-2xl">
-            <h1 className="mb-4 text-4xl font-bold">{t("notFound.title")}</h1>
-            <p className="mb-4 text-xl text-muted-foreground">
-              {t("notFound.message")}
-            </p>
-            <a href="/" className="text-primary underline hover:text-primary/90">
-              {t("notFound.returnHome")}
-            </a>
-          </div>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="text-center">
+        <h1 className="mb-4 text-4xl font-bold">{t("notFound.title")}</h1>
+        <p className="mb-4 text-xl text-muted-foreground">
+          {t("notFound.message")}
+        </p>
+        <a href="/" className="text-primary underline hover:text-primary/90">
+          {t("notFound.returnHome")}
+        </a>
       </div>
-      <SiteFooter />
     </div>
   );
 };

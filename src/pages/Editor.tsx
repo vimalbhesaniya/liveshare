@@ -62,10 +62,6 @@ import {
 } from "@/components/PasswordDialog";
 import { RetentionPrompt } from "@/components/RetentionPrompt";
 import { useNavigateToRandomEditor } from "@/hooks/use-random-editor";
-import { SiteFooter } from "@/components/SiteFooter";
-import { BelowEditorAdSlot } from "@/components/ads/BelowEditorAdSlot";
-import { SidebarAdSlot } from "@/components/ads/SidebarAdSlot";
-
 const SAVE_DEBOUNCE_MS = 3000;
 const DOC_OPS_THROTTLE_MS = 16;
 
@@ -1097,12 +1093,9 @@ const EditorPage = () => {
 
   if (snippetReady && isPasswordProtected && !isAuthenticated) {
     return (
-      <div className="flex h-svh flex-col overflow-hidden bg-background">
+      <div className="h-svh overflow-hidden bg-background">
         <Navigation />
-        <div className="flex-1 overflow-hidden flex items-center justify-center">
-          <EnterPasswordDialog onPasswordSubmit={handlePasswordSubmit} />
-        </div>
-        <SiteFooter />
+        <EnterPasswordDialog onPasswordSubmit={handlePasswordSubmit} />
       </div>
     );
   }
@@ -1274,8 +1267,7 @@ const EditorPage = () => {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 gap-4">
-          <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border shadow-lg">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border shadow-lg">
           {!snippetReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
               <div className="text-sm text-muted-foreground">
@@ -1346,14 +1338,9 @@ const EditorPage = () => {
               </div>
             }
           />
-          </div>
-
-          <SidebarAdSlot />
         </div>
       </div>
 
-      <BelowEditorAdSlot />
-      <SiteFooter />
       <RetentionPrompt
         open={showRetentionPrompt}
         onDismiss={() => setShowRetentionPrompt(false)}
