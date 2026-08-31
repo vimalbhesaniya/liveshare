@@ -1,15 +1,15 @@
 module.exports = {
   apps: [
     {
-      name: "liveshare",
-      script: "server/dist/index.js",
+      name: "liveshare-backend",
+      cwd: "../liveshare-backend",
+      script: "npm",
+      args: "start",
       instances: 1,
       autorestart: true,
       watch: false,
-      env_file: ".env",
       env: {
         NODE_ENV: "production",
-        SERVE_FRONTEND: "true",
       },
     },
   ],

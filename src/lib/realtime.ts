@@ -93,7 +93,7 @@ class AwsRealtimeClient implements RealtimeLike {
 
 let client: RealtimeLike | null = null;
 
-/** AWS WebSocket (serverless) or Socket.io (local dev). */
+/** Socket.io client, or optional legacy AWS WebSocket when VITE_WS_URL is set. */
 export function getRealtime(): RealtimeLike {
   if (!client) {
     client = WS_URL

@@ -22,7 +22,7 @@ Share code instantly with developers worldwide. Perfect for interviews, collabor
 
 - **Frontend**: React 18, TypeScript, Vite
 - **Styling**: Tailwind CSS, shadcn/ui
-- **Backend**: Node.js, Express, Socket.io, MongoDB
+- **Backend**: Next.js, Socket.io, MongoDB (see `../liveshare-backend`)
 - **Icons**: Lucide React
 
 ## 📦 Installation
@@ -34,16 +34,18 @@ git clone https://github.com/your-username/liveshare.git
 # Navigate to project directory
 cd liveshare
 
-# Install dependencies
+# Install frontend dependencies
 npm install
-cd server && npm install && cd ..
+
+# Install backend dependencies (sibling folder)
+cd ../liveshare-backend && npm install && cd ../liveshare
 
 # Start MongoDB locally (or use MongoDB Atlas)
 # mongod
 
 # Copy env files
 cp .env.example .env
-cp server/.env.example server/.env
+cp ../liveshare-backend/.env.example ../liveshare-backend/.env.local
 
 # Start frontend + backend
 npm run dev
@@ -51,61 +53,39 @@ npm run dev
 
 ## 🔧 Scripts
 
-- `npm run dev` - Start frontend and backend together
+- `npm run dev` - Start frontend (`:8080`) and backend (`:3000`) together
 - `npm run dev:client` - Start Vite dev server only
-- `npm run dev:server` - Start Socket.io + API server only
+- `npm run dev:server` - Start Next.js + Socket.io backend only
 - `npm run build` - Build frontend for production
-- `npm run build:server` - Build backend TypeScript
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
 ## 🌐 Environment Variables
 
-**Frontend → Backend** (root `.env`):
+**Frontend** (root `.env`):
 
 ```env
-VITE_BACKEND_URL=
-VITE_API_URL=
-VITE_SOCKET_URL=
+VITE_BACKEND_URL=http://localhost:3000
 ```
 
-Leave empty in development — Vite proxies `/api` and `/socket.io` to the backend on port 3001.
+One URL for both REST API and Socket.io. Leave empty in dev — Vite proxies `/api` and `/socket.io` to `http://localhost:3000`.
 
-**Production on Vercel (`www.liveshare.dev`, etc.)**
+**Production on Vercel**
 
-Your `vercel.json` must proxy `/api/*` to API Gateway **before** the SPA fallback. Otherwise every request (including `PATCH /api/snippets/...`) is rewritten to `index.html`, and saves break.
-
-1. In `vercel.json`, set the `destination` of the first rewrite to your **HTTP API** URL from `serverless deploy` (same host you use for `VITE_BACKEND_URL` if calling the API directly).
-2. Set Lambda env (and redeploy) with both apex and `www` if you use both:
+Set at **build** time so the browser calls your deployed backend directly:
 
 ```env
-CLIENT_ORIGIN=https://liveshare.dev,https://www.liveshare.dev
+VITE_BACKEND_URL=https://your-backend.example.com
 ```
 
-3. Realtime WebSockets are not proxied by that rule. Set at **build** time:
+Backend env (`../liveshare-backend/.env.local`):
 
 ```env
-VITE_WS_URL=wss://YOUR_WS_API.execute-api.REGION.amazonaws.com/dev
-```
-
-**Alternative:** omit the Vercel API rewrite and set `VITE_BACKEND_URL` / `VITE_WS_URL` at build time so the browser calls AWS directly (CORS must allow your site).
-
-**Backend** (`server/.env`):
-
-```env
-PORT=3001
-MONGODB_URI=mongodb+srv://liveshare:liveshare@cluster0.ioui8sl.mongodb.net/?appName=Cluster0
-CLIENT_ORIGIN=http://localhost:8080
+MONGODB_URI=mongodb://localhost:27017/liveshare
+CLIENT_ORIGIN=http://localhost:8080,https://liveshare.dev,https://www.liveshare.dev
+PORT=3000
 ```
 
 ## 📝 License
 
-MIT License - feel free to use this project for personal or commercial purposes.
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
----
-
-Made with ❤️ for developers
+MIT
