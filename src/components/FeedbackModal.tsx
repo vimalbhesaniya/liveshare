@@ -20,20 +20,30 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "submitting" | "success" | "error"
+  >("idle");
   const [errorText, setErrorText] = useState("");
   const { t } = useTranslation();
 
-  const handleClose = useCallback(() => {
-    onOpenChange(false);
-    setTimeout(() => {
-      setName("");
-      setEmail("");
-      setMessage("");
-      setStatus("idle");
-      setErrorText("");
-    }, 200);
-  }, [onOpenChange]);
+  const resetForm = useCallback(() => {
+    setName("");
+    setEmail("");
+    setMessage("");
+    setStatus("idle");
+    setErrorText("");
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && status === "submitting") return;
+      onOpenChange(nextOpen);
+      if (!nextOpen) {
+        window.setTimeout(resetForm, 200);
+      }
+    },
+    [onOpenChange, resetForm, status],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,27 +67,34 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
       return;
     }
 
+    const fromName = name.trim() || "Anonymous";
+    const fromEmail = email.trim() || "not-provided@feedback.local";
+
     try {
       await emailjs.send(
         serviceId,
         templateId,
         {
-          from_name: name.trim() || "Anonymous",
-          reply_to: email.trim() || "not-provided@feedback.local",
+          // Support both common EmailJS template variable names
+          from_name: fromName,
+          from_email: fromEmail,
+          reply_to: fromEmail,
           message: trimmedMessage,
         },
-        publicKey
+        publicKey,
       );
       setStatus("success");
     } catch (err) {
       console.error("Feedback send error:", err);
       setStatus("error");
-      setErrorText(err instanceof Error ? err.message : t("feedback.sendError"));
+      setErrorText(
+        err instanceof Error ? err.message : t("feedback.sendError"),
+      );
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="sm:max-w-md"
         onPointerDownOutside={(e) => {
@@ -96,7 +113,9 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
         {status === "success" ? (
           <div className="py-6 text-center space-y-4">
             <p className="text-muted-foreground">{t("feedback.thankYou")}</p>
-            <Button onClick={handleClose}>{t("feedback.close")}</Button>
+            <Button onClick={() => handleOpenChange(false)}>
+              {t("feedback.close")}
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -128,7 +147,8 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
 
             <div className="space-y-2">
               <Label htmlFor="feedback-message">
-                {t("feedback.feedbackLabel")} <span className="text-destructive">*</span>
+                {t("feedback.feedbackLabel")}{" "}
+                <span className="text-destructive">*</span>
               </Label>
               <textarea
                 id="feedback-message"
@@ -150,13 +170,15 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleClose}
+                onClick={() => handleOpenChange(false)}
                 disabled={status === "submitting"}
               >
                 {t("feedback.close")}
               </Button>
               <Button type="submit" disabled={status === "submitting"}>
-                {status === "submitting" ? t("feedback.sending") : t("feedback.submit")}
+                {status === "submitting"
+                  ? t("feedback.sending")
+                  : t("feedback.submit")}
               </Button>
             </div>
           </form>
