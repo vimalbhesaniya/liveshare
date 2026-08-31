@@ -1,6 +1,6 @@
 const WHATSAPP_NUMBER = "919978467266";
 const SUGGESTION_MESSAGE =
-  "Hi LiveShare team! I have one suggestion:\n\n";
+  "Hi LiveShare team! I have a suggestion:\n\n";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -25,8 +25,8 @@ export function WhatsAppFloatButton() {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Send suggestion on WhatsApp"
-      title="Send suggestion on WhatsApp"
+      aria-label="Share your suggestions on WhatsApp"
+      title="Share your suggestions on WhatsApp"
       className="whatsapp-float"
     >
       <span className="whatsapp-float__ping" aria-hidden="true" />
