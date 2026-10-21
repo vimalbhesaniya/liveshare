@@ -3,7 +3,11 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // GitHub Pages project URL:
+  // https://vimalbhesaniya.github.io/liveshare/
+  base: command === "build" ? "/liveshare/" : "/",
+
   server: {
     host: "::",
     port: 8080,
@@ -18,18 +22,23 @@ export default defineConfig({
       },
     },
   },
+
   plugins: [react()],
+
   worker: {
     format: "es",
   },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
   build: {
-    // esbuild minifies with far less memory than terser (Monaco workers OOM on CI)
+    // Use esbuild to reduce memory usage during builds.
     minify: "esbuild",
+
     rollupOptions: {
       output: {
         manualChunks: {
@@ -38,11 +47,13 @@ export default defineConfig({
         },
       },
     },
+
     chunkSizeWarningLimit: 1000,
     sourcemap: false,
   },
-  // Optimize dependencies
+
+  // Optimize dependencies.
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom"],
   },
-});
+}));
