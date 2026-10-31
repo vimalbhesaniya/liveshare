@@ -1,3 +1,7 @@
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 class tyt{constructor(){this.listeners=[],this.unexpectedErrorHandler=function(y){setTimeout(()=>{throw y.stack?b8.isErrorNoTelemetry(y)?new b8(y.message+`
 
 `+y.stack):new Error(y.message+`

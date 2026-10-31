@@ -13,8 +13,6 @@ dist-ssr
 *.local
 
 # Environment & secrets
-.env
-.env.local
 
 # Serverless
 .serverless/
@@ -22,8 +20,6 @@ server/.serverless/
 server/dist/
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
@@ -34,3 +30,5 @@ server/dist/
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
+.gitignore
+config.bat
