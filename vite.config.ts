@@ -3,10 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command }) => ({
-  // GitHub Pages project URL:
-  // https://vimalbhesaniya.github.io/liveshare/
-  base: command === "build" ? "/liveshare/" : "/",
+export default defineConfig({
+  // Custom domain: https://liveshare.dev/
+  base: "/",
 
   server: {
     host: "::",
@@ -36,7 +35,6 @@ export default defineConfig(({ command }) => ({
   },
 
   build: {
-    // Use esbuild to reduce memory usage during builds.
     minify: "esbuild",
 
     rollupOptions: {
@@ -52,8 +50,7 @@ export default defineConfig(({ command }) => ({
     sourcemap: false,
   },
 
-  // Optimize dependencies.
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom"],
   },
-}));
+});
