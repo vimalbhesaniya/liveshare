@@ -6,8 +6,15 @@ import App from "./App.tsx";
 import Maintenance from "./pages/Maintenance";
 import "./index.css";
 
-// Inject Vercel Speed Insights for performance monitoring
-injectSpeedInsights();
+// Only inject Vercel Speed Insights/Analytics when running on Vercel or explicitly enabled
+const isVercel =
+  typeof window !== "undefined" &&
+  (window.location.hostname.endsWith(".vercel.app") ||
+    import.meta.env.VITE_ENABLE_VERCEL_ANALYTICS === "true");
+
+if (isVercel) {
+  injectSpeedInsights();
+}
 
 // Register service worker for browser notifications
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -40,6 +47,6 @@ createRoot(document.getElementById("root")!).render(
     ) : (
       <App />
     )}
-    <Analytics />
+    {isVercel && <Analytics />}
   </>
 );

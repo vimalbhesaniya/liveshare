@@ -1,6 +1,21 @@
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
+
+function copy404Plugin(): Plugin {
+  return {
+    name: "copy-404-html",
+    closeBundle() {
+      const distDir = path.resolve(__dirname, "dist");
+      const indexPath = path.resolve(distDir, "index.html");
+      const notFoundPath = path.resolve(distDir, "404.html");
+      if (fs.existsSync(indexPath)) {
+        fs.copyFileSync(indexPath, notFoundPath);
+      }
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,7 +37,7 @@ export default defineConfig({
     },
   },
 
-  plugins: [react()],
+  plugins: [react(), copy404Plugin()],
 
   worker: {
     format: "es",
